@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "rules": [
+    {
+      "path": "rules/general-project-rule.mdc",
+      "enabled": true
+    }
+  ]
+} 

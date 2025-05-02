@@ -1,0 +1,12 @@
+---
+description: how i like to code typed in on th
+globs: *.tsx, src/config/**/*.json
+alwaysApply: false
+---
+# Coding Workflow Perferences
+
+- Focus on areas of code relevant to the task
+- Do no touch code that is unrelated to the task
+- Wrtie thorough tests for all major functionality
+- Avoid making major changes to the patterns and architecture of how a feature works, after it has shown to work well, unless explicitly instructed
+- Always think about what other methods and areas of code might be affected by code changes
