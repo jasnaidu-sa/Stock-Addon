@@ -8,12 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useSignUp } from '@clerk/clerk-react';
 
 const signupSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  name: z.string().min(1, 'Name is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   company_name: z.string().min(1, 'Company name is required'),
   group: z.enum(['Franchisee', 'Regional']),
 });
@@ -23,12 +26,15 @@ type SignupFormData = z.infer<typeof signupSchema>;
 export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { isLoaded, signUp } = useSignUp();
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
       email: '',
-      name: '',
+      password: '',
+      firstName: '',
+      lastName: '',
       company_name: '',
       group: 'Franchisee',
     },
@@ -36,11 +42,25 @@ export function SignupForm() {
 
   const onSubmit = async (data: SignupFormData) => {
     setIsLoading(true);
-    console.log('=== Starting Registration Process ===');
+    
+    // Check if Clerk is loaded
+    if (!isLoaded) {
+      setIsLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Authentication service not available. Please try again later."
+      });
+      return;
+    }
 
     try {
-      // First, check if the user already exists in our users table
-      const { data: existingUsers, error: checkError } = await supabase
+      // First, check if the user already exists in our Supabase users table
+      if (!supabaseAdmin) {
+        throw new Error('Database connection not available');
+      }
+      
+      const { data: existingUsers, error: checkError } = await supabaseAdmin
         .from('users')
         .select('email')
         .eq('email', data.email)
@@ -55,16 +75,43 @@ export function SignupForm() {
         throw new Error('An account with this email already exists');
       }
 
-      // Create a new user record with pending status
-      const { error: insertError } = await supabase
+      // Step 1: Create user in Clerk
+      console.log('Creating user in Clerk...');
+      const clerkResult = await signUp.create({
+        emailAddress: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+      
+      // Prepare the user for email verification
+      await clerkResult.prepareEmailAddressVerification({ strategy: 'email_code' });
+      
+      // Get the Clerk user ID
+      const clerkUserId = clerkResult.createdUserId;
+      console.log('Clerk user created with ID:', clerkUserId);
+      
+      if (!clerkUserId) {
+        throw new Error('Failed to create user account');
+      }
+
+      // Step 2: Create a new user record in Supabase with the Clerk user ID
+      console.log('Creating user in Supabase with Clerk ID...');
+      if (!supabaseAdmin) {
+        throw new Error('Database connection not available');
+      }
+      
+      const { error: insertError } = await supabaseAdmin
         .from('users')
         .insert({
           email: data.email,
-          name: data.name,
+          first_name: data.firstName,
+          last_name: data.lastName,
           role: 'user',
           group_type: data.group,
           company_name: data.company_name,
-          status: 'pending'
+          status: 'pending',
+          clerk_id: clerkUserId // Store the Clerk user ID for mapping
         });
         
       if (insertError) {
@@ -72,12 +119,15 @@ export function SignupForm() {
         throw insertError;
       }
       
-      console.log('User created with pending status');
+      console.log('User created with pending status and Clerk ID mapping');
       
       toast({
         title: 'Registration Successful',
-        description: 'Your account has been created and is pending approval. You will be notified when your account is approved.',
+        description: 'Your account has been created. Please verify your email to continue.',
       });
+      
+      // Redirect to verification page
+      window.location.href = `/verify?email=${encodeURIComponent(data.email)}`;
       
       form.reset();
     } catch (error) {
@@ -112,21 +162,39 @@ export function SignupForm() {
       </CardHeader>
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              type="text"
-              autoComplete="name"
-              {...form.register('name')}
-              className={form.formState.errors.name ? 'border-destructive' : ''}
-              disabled={isLoading}
-            />
-            {form.formState.errors.name && (
-              <p className="text-sm text-destructive">
-                {form.formState.errors.name.message}
-              </p>
-            )}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                autoComplete="given-name"
+                {...form.register('firstName')}
+                className={form.formState.errors.firstName ? 'border-destructive' : ''}
+                disabled={isLoading}
+              />
+              {form.formState.errors.firstName && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.firstName.message}
+                </p>
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                autoComplete="family-name"
+                {...form.register('lastName')}
+                className={form.formState.errors.lastName ? 'border-destructive' : ''}
+                disabled={isLoading}
+              />
+              {form.formState.errors.lastName && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.lastName.message}
+                </p>
+              )}
+            </div>
           </div>
           
           <div className="space-y-2">
@@ -142,6 +210,23 @@ export function SignupForm() {
             {form.formState.errors.email && (
               <p className="text-sm text-destructive">
                 {form.formState.errors.email.message}
+              </p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              {...form.register('password')}
+              className={form.formState.errors.password ? 'border-destructive' : ''}
+              disabled={isLoading}
+            />
+            {form.formState.errors.password && (
+              <p className="text-sm text-destructive">
+                {form.formState.errors.password.message}
               </p>
             )}
           </div>

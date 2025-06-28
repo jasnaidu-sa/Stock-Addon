@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { supabase } from "@/lib/supabase";
+import { getSupabaseClient } from '@/lib/supabase';;
 import { fetchBaseInfoByCode } from "@/lib/product-utils";
 import { Loader2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -17,7 +17,8 @@ interface BaseOrderItem {
 }
 
 export default function FixBaseCodesPage() {
-  const [isProcessing, setIsProcessing] = useState(false);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [processedCount, setProcessedCount] = useState(0);

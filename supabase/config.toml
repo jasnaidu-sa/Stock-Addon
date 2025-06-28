@@ -1,0 +1,4 @@
+# Supabase project configuration
+
+[functions."admin-update-order"]
+  verify_jwt = false

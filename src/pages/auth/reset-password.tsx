@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { BackgroundPaths } from '@/components/ui/background-paths';
 import { useNavigate } from 'react-router-dom';
 
@@ -27,7 +27,8 @@ const resetPasswordSchema = z.object({
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 

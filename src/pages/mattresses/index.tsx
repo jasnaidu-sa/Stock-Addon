@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/cart/cart-provider';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ import { Label } from '@/components/ui/label';
 import type { Product } from '@/types/product';
 
 export default function MattressPage() {
+  
+    const supabase = getSupabaseClient();
   const [mattresses, setMattresses] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -32,6 +34,15 @@ export default function MattressPage() {
   }, []);
 
   const loadMattresses = async () => {
+    if (!supabase) {
+      toast({
+        title: 'Error',
+        description: 'Database connection not available.',
+        variant: 'destructive',
+      });
+      setLoading(false);
+      return;
+    }
     try {
       // Try a different approach without quoted table names
       console.log('Fetching mattresses...');
@@ -62,7 +73,7 @@ export default function MattressPage() {
           // Use the base table directly
           const { data: baseData, error: baseError } = await supabase
             .from('base')
-            .select('*')
+            .select('id, code, description, price')
             .in('code', baseCodes)
             .throwOnError(); // Added to throw error immediately if any
             
@@ -76,9 +87,10 @@ export default function MattressPage() {
             return {
               ...mattress,
               base: baseInfo ? {
-                base_code: baseInfo.code,
+                id: baseInfo.id, // Ensure the base's own ID is stored
+                code: baseInfo.code,
                 description: baseInfo.description,
-                price: baseInfo.price
+                price: baseInfo.price,
               } : null
             };
           });
@@ -123,45 +135,29 @@ export default function MattressPage() {
     try {
       const quantity = quantities[product.id] || 1;
       const shouldIncludeBase = includeBase[product.id];
-      
-      // Add mattress to cart
+      const price = includeBase[product.id] ? Number(product.set_price || 0) : Number(product.mattress_price || 0);
+      const name = product.description;
+      const code = product.mattress_code || '';
+
+      const cartItem = {
+        id: shouldIncludeBase ? `${product.id}_set` : product.id, // Ensure unique ID if base is included vs not
+        quantity,
+        price, // This is the price for the mattress, or mattress + base if 'set_price' is used
+        name,
+        code: code || product.id, // Fallback to product.id if mattress_code is missing
+        category: 'mattress' as const, // Explicitly 'mattress' for items from this page. Consider if product_type makes this redundant.
+        product_type: 'mattress' as const, // Set product_type based on the source (mattresses page)
+        base: shouldIncludeBase && product.base ? product.base : undefined, // Include the base object if selected and available
+      };
+
       dispatch({
         type: 'ADD_ITEM',
-        payload: {
-          id: product.id,
-          quantity,
-          price: Number(product.mattress_price) || 0,
-          name: product.description,
-          code: product.mattress_code || '',
-          category: 'mattress',
-          base_qty: Number(product.base_qty) || 1,
-        },
+        payload: cartItem,
       });
 
-      // If base is included, add it using the base code from the mattress
-      if (shouldIncludeBase && product.base_code) {
-        // Calculate base quantity based on mattress quantity and base_qty field
-        const baseQuantity = quantity * (Number(product.base_qty) || 1);
-        
-        // Use the individual base_price from the mattress table
-        const basePrice = Number(product.base_price) || 0; // Use base_price directly
-
-        dispatch({
-          type: 'ADD_ITEM',
-          payload: {
-            id: `${product.id}_base`,
-            quantity: baseQuantity, // Use calculated base quantity
-            price: basePrice,       // Use base unit price
-            name: `Base: ${product.base_code || 'Standard Base'} (x${Number(product.base_qty) || 1})`,
-            code: product.base_code || '',
-            category: 'base',
-          },
-        });
-      }
-
       toast({
-        title: 'Added to cart',
-        description: `${product.description} ${shouldIncludeBase ? '(with base)' : ''} (×${quantity}) has been added to your cart`,
+        title: 'Added to Cart',
+        description: `${name} ${shouldIncludeBase ? '(with base)' : ''} (×${quantity}) has been added to your cart`,
       });
     } catch (error) {
       console.error('Failed to add to cart:', error);

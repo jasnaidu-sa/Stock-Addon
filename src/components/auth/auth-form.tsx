@@ -8,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 
 const authSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  emailOrUsername: z.string().min(1, 'Email or username is required'),
   password: z.string().min(1, 'Password is required'),
   name: z.string().optional(),
 });
@@ -19,7 +19,8 @@ const authSchema = z.object({
 type AuthFormData = z.infer<typeof authSchema>;
 
 export function AuthForm() {
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
   const { toast } = useToast();
@@ -27,11 +28,32 @@ export function AuthForm() {
   const form = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
     defaultValues: {
-      email: '',
+      emailOrUsername: '',
       password: '',
       name: '',
     },
   });
+
+  // Helper function to determine if input is email or username
+  const isEmail = (input: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(input);
+  };
+
+  // Helper function to find user by username
+  const findUserByUsername = async (username: string) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('email')
+      .eq('name', username)
+      .single();
+    
+    if (error || !data) {
+      return null;
+    }
+    
+    return data.email;
+  };
 
   const onSubmit = async (data: AuthFormData) => {
     setIsLoading(true);
@@ -39,7 +61,19 @@ export function AuthForm() {
 
     try {
       if (isResetPassword) {
-        const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
+        // For password reset, we need an email
+        let email = data.emailOrUsername;
+        
+        if (!isEmail(email)) {
+          // If it's a username, try to find the email
+          const userEmail = await findUserByUsername(email);
+          if (!userEmail) {
+            throw new Error('User not found. Please use your email address for password reset.');
+          }
+          email = userEmail;
+        }
+
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/reset-password`,
         });
 
@@ -52,9 +86,15 @@ export function AuthForm() {
         setIsResetPassword(false);
       } else if (isSignUp) {
         console.log('Starting signup process...');
+        
+        // For signup, emailOrUsername should be an email
+        if (!isEmail(data.emailOrUsername)) {
+          throw new Error('Please enter a valid email address for signup');
+        }
+        
         // First sign up the user
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
-          email: data.email,
+          email: data.emailOrUsername,
           password: data.password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
@@ -81,7 +121,7 @@ export function AuthForm() {
           {
             id: authData.user.id,
             name: data.name,
-            email: data.email,
+            email: data.emailOrUsername,
             role: 'customer',
           },
         ]);
@@ -100,9 +140,23 @@ export function AuthForm() {
         setIsSignUp(false);
       } else {
         console.log('Starting signin process...');
+        
+        let email = data.emailOrUsername;
+        
+        // If it's not an email, try to find the email by username
+        if (!isEmail(data.emailOrUsername)) {
+          console.log('Input appears to be a username, looking up email...');
+          const userEmail = await findUserByUsername(data.emailOrUsername);
+          if (!userEmail) {
+            throw new Error('User not found. Please check your username or email.');
+          }
+          email = userEmail;
+          console.log('Found email for username:', email);
+        }
+        
         // Login Process
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: data.email,
+          email: email,
           password: data.password,
         });
 
@@ -144,7 +198,7 @@ export function AuthForm() {
       let errorMessage = 'Authentication failed';
       if (error instanceof Error) {
         if (error.message.includes('Invalid login credentials')) {
-          errorMessage = 'Invalid email or password';
+          errorMessage = 'Invalid email/username or password';
         } else if (error.message.includes('Email not confirmed')) {
           errorMessage = 'Please verify your email address';
         } else if (error.message.includes('Invalid API key')) {
@@ -171,10 +225,10 @@ export function AuthForm() {
         <CardTitle>{isResetPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Sign In'}</CardTitle>
         <CardDescription>
           {isResetPassword
-            ? 'Enter your email to receive a password reset link'
+            ? 'Enter your email or username to receive a password reset link'
             : isSignUp
             ? 'Enter your details to create a new account'
-            : 'Enter your credentials to access your account'}
+            : 'Enter your email/username and password to access your account'}
         </CardDescription>
       </CardHeader>
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
@@ -198,18 +252,21 @@ export function AuthForm() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="emailOrUsername">
+              {isSignUp ? 'Email' : 'Email or Username'}
+            </Label>
             <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              {...form.register('email')}
-              className={form.formState.errors.email ? 'border-destructive' : ''}
+              id="emailOrUsername"
+              type={isSignUp ? 'email' : 'text'}
+              autoComplete={isSignUp ? 'email' : 'username'}
+              placeholder={isSignUp ? 'Enter your email' : 'Enter email or username'}
+              {...form.register('emailOrUsername')}
+              className={form.formState.errors.emailOrUsername ? 'border-destructive' : ''}
               disabled={isLoading}
             />
-            {form.formState.errors.email && (
+            {form.formState.errors.emailOrUsername && (
               <p className="text-sm text-destructive">
-                {form.formState.errors.email.message}
+                {form.formState.errors.emailOrUsername.message}
               </p>
             )}
           </div>

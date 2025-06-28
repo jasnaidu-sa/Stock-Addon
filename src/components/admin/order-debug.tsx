@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { Button } from '@/components/ui/button';
 
 export function OrderDebug() {
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [debugInfo, setDebugInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const runDebug = async () => {

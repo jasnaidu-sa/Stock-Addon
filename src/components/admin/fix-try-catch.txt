@@ -1,0 +1,53 @@
+// Copy this segment to replace the problematic try-catch structure in admin-order-table.tsx
+
+// Beginning of handleSave function
+const handleSave = async (order: Order) => {
+  try {
+    setIsSaving(true);
+    const editedOrderItems = editingItems[order.id];
+    if (!editedOrderItems) {
+      toast({ title: "No changes", description: "No items were modified.", variant: "default" });
+      setIsSaving(false);
+      return;
+    }
+
+    const originalOrderItems = order.items || [];
+    const newTotals = calculateTotals(editedOrderItems);
+    
+    // Use Clerk auth with proper hooks
+    if (!isSignedIn || !userId) {
+      toast({ title: "Authentication Error", description: "Please sign in again to continue.", variant: "destructive" });
+      setIsSaving(false);
+      return;
+    }
+
+    // Remaining implementation...
+    // ... (Keep all the existing code here) ...
+
+    // At the end, make sure the try-catch-finally block is properly structured:
+    
+    // Clear editing state for this order
+    setEditingItems(current => {
+      const { [order.id]: _, ...rest } = current;
+      return rest;
+    });
+    
+    setAdminNotes(current => {
+      const { [order.id]: _, ...rest } = current;
+      return rest;
+    });
+
+    reloadOrders(); // Refresh the order list
+  } catch (error: any) {
+    console.error('Error updating order:', error);
+    
+    // General error handling
+    toast({
+      title: "Error",
+      description: error.message || "Failed to update order",
+      variant: "destructive",
+    });
+  } finally {
+    setIsSaving(false);
+  }
+};

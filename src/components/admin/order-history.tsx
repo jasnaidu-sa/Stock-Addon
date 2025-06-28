@@ -15,7 +15,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { OrderStatusBadge } from '@/lib/order-status';
 
 interface OrderHistoryItem {
@@ -50,7 +50,8 @@ interface OrderHistoryProps {
   formatDate: (date: string) => string;
 }
 
-export function OrderHistory({ orderId, formatDate }: OrderHistoryProps) {
+export function OrderHistory({ 
+  const supabase = getSupabaseClient(); // Initialize Supabase clientorderId, formatDate }: OrderHistoryProps) {
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<OrderHistoryItem[]>([]);
   const [itemHistory, setItemHistory] = useState<Record<string, OrderItemHistoryItem[]>>({});

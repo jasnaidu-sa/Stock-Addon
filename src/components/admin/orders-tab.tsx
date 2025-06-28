@@ -13,7 +13,7 @@ import { Order } from '@/types/order';
 import { SortConfig } from '@/types/common';
 import { AdminOrderTable } from './admin-order-table';
 import { OrderDetail } from './order-detail';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { useToast } from '@/hooks/use-toast';
 
 interface OrdersTabProps {
@@ -29,7 +29,8 @@ interface OrdersTabProps {
 }
 
 export function OrdersTab({
-  orders,
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientorders,
   loading,
   sortConfig,
   handleSort,

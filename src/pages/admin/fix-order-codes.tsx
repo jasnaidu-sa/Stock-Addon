@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { updateOrderItemCodes } from '@/lib/product-utils';
 import { Loader2, CheckCircle2, Info } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 export function FixOrderCodesPage() {
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [processedOrders, setProcessedOrders] = useState<number>(0);
   const [totalOrders, setTotalOrders] = useState<number>(0);

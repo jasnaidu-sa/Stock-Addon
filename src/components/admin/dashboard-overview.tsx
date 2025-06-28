@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { 
   Card, 
   CardContent, 
@@ -47,7 +47,8 @@ interface AnalyticsData {
 }
 
 export function DashboardOverview() {
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     totalOrders: 0,
     totalRevenue: 0,
     totalCustomers: 0,

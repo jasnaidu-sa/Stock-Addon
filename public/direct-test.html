@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Direct Supabase Login Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+        button { padding: 10px; margin: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Direct Supabase API Test</h1>
+    <p>This page tests Supabase authentication without using the client library</p>
+    
+    <div>
+        <h3>Login Test</h3>
+        <input type="email" id="email" placeholder="Email" value="jnaidu@thebedshop.co.za">
+        <input type="password" id="password" placeholder="Password" value="admin123">
+        <button onclick="testLogin()">Test Login</button>
+    </div>
+    
+    <div>
+        <h3>API Key Validation Test</h3>
+        <button onclick="testApiKey()">Test API Key</button>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        const resultDiv = document.getElementById('result');
+        const SUPABASE_URL = 'https://cfjvskafvcljvxnawccs.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmanZza2FmdmNsanZ4bmF3Y2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2MzczODQsImV4cCI6MjA1NjIxMzM4NH0.0kEvw4fWwp0Qw2fSXtmvcstZK3pYhS2yXiS0h68DEx0';
+        
+        function appendToResult(text, isError = false) {
+            const element = document.createElement('div');
+            element.className = isError ? 'error' : 'success';
+            element.textContent = text;
+            resultDiv.appendChild(element);
+        }
+        
+        function appendObjectToResult(obj, title) {
+            const titleEl = document.createElement('h4');
+            titleEl.textContent = title;
+            resultDiv.appendChild(titleEl);
+            
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(obj, null, 2);
+            resultDiv.appendChild(pre);
+        }
+        
+        async function testLogin() {
+            resultDiv.innerHTML = '';
+            appendToResult('Starting direct login test...');
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                appendToResult('Please enter email and password', true);
+                return;
+            }
+            
+            try {
+                appendToResult(`Attempting to login with email: ${email}`);
+                appendToResult(`Using API key: ${SUPABASE_KEY.substring(0, 10)}...`);
+                
+                const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    appendToResult('✅ Login successful!');
+                    appendObjectToResult(data, 'Login Response:');
+                } else {
+                    appendToResult(`❌ Login failed: ${data.error || 'Unknown error'}`, true);
+                    appendObjectToResult(data, 'Error Details:');
+                }
+            } catch (error) {
+                appendToResult(`❌ Error: ${error.message}`, true);
+            }
+        }
+        
+        async function testApiKey() {
+            resultDiv.innerHTML = '';
+            appendToResult('Testing API key validation...');
+            
+            try {
+                // Test the public endpoint first
+                const publicResponse = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY
+                    }
+                });
+                
+                if (publicResponse.ok) {
+                    appendToResult('✅ API key is valid for public endpoints!');
+                } else {
+                    appendToResult('❌ API key failed on public endpoints', true);
+                    const publicData = await publicResponse.json();
+                    appendObjectToResult(publicData, 'Public Endpoint Error:');
+                }
+                
+                // Check if we can decode the JWT
+                try {
+                    const parts = SUPABASE_KEY.split('.');
+                    if (parts.length === 3) {
+                        const payload = JSON.parse(atob(parts[1]));
+                        appendToResult('✅ JWT token structure is valid');
+                        appendObjectToResult(payload, 'Token payload:');
+                        
+                        // Check for expiration
+                        if (payload.exp) {
+                            const expDate = new Date(payload.exp * 1000);
+                            const now = new Date();
+                            if (expDate > now) {
+                                appendToResult(`✅ Token is not expired. Expires: ${expDate.toLocaleString()}`);
+                            } else {
+                                appendToResult(`❌ Token is expired! Expired: ${expDate.toLocaleString()}`, true);
+                            }
+                        }
+                    } else {
+                        appendToResult('❌ JWT token structure is invalid', true);
+                    }
+                } catch (e) {
+                    appendToResult(`❌ Error decoding JWT: ${e.message}`, true);
+                }
+            } catch (error) {
+                appendToResult(`❌ Error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html> 

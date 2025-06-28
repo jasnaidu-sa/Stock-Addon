@@ -169,13 +169,13 @@ export function OrderDetail({
                               }
                                 
                               return (
-                                <TableRow key={item.id || index}>
+                              <TableRow key={item.id || index}>
                                   <TableCell className="font-medium">{productCode}</TableCell>
                                   <TableCell>{productDesc}</TableCell>
-                                  <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                                  <TableCell className="text-right">{item.quantity}</TableCell>
-                                  <TableCell className="text-right">{formatCurrency(item.total)}</TableCell>
-                                </TableRow>
+                                <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.total)}</TableCell>
+                              </TableRow>
                               );
                             })}
                           </TableBody>

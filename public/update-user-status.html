@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update User Status</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .user-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .user-info {
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Update User Status</h1>
+        <p>Manage user statuses - activate pending users or update existing users.</p>
+        
+        <button onclick="loadUsers()" id="loadBtn">Load Users</button>
+        <button onclick="activateAllPending()" id="activateAllBtn">Activate All Pending Users</button>
+        
+        <div id="message"></div>
+        <div id="usersList"></div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const supabaseUrl = 'https://cfjvskafvcljvxnawccs.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmanZza2FmdmNsanZ4bmF3Y2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2MzczODQsImV4cCI6MjA1NjIxMzM4NH0.0kEvw4fWwp0Qw2fSXtmvcstZK3pYhS2yXiS0h68DEx0';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+        
+        const messageDiv = document.getElementById('message');
+        const usersListDiv = document.getElementById('usersList');
+        
+        function showMessage(text, type = 'info') {
+            messageDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+        }
+        
+        async function loadUsers() {
+            try {
+                showMessage('Loading users...', 'info');
+                
+                const { data: users, error } = await supabase
+                    .from('users')
+                    .select('id, name, email, status, role, created_at')
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                displayUsers(users);
+                showMessage(`Loaded ${users.length} users`, 'success');
+                
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function displayUsers(users) {
+            usersListDiv.innerHTML = users.map(user => `
+                <div class="user-card">
+                    <div class="user-info">
+                        <strong>${user.name}</strong> (${user.email})
+                    </div>
+                    <div class="user-info">
+                        Role: ${user.role} | Status: <span class="status ${user.status}">${user.status}</span>
+                    </div>
+                    <div class="user-info">
+                        Created: ${new Date(user.created_at).toLocaleDateString()}
+                    </div>
+                    <div>
+                        ${user.status === 'pending' ? 
+                            `<button onclick="updateUserStatus('${user.id}', 'active', '${user.name}')">Activate User</button>` : 
+                            `<button onclick="updateUserStatus('${user.id}', 'pending', '${user.name}')">Set to Pending</button>`
+                        }
+                        ${user.status === 'active' ? 
+                            `<button onclick="updateUserStatus('${user.id}', 'disabled', '${user.name}')">Disable User</button>` : 
+                            user.status === 'disabled' ? 
+                            `<button onclick="updateUserStatus('${user.id}', 'active', '${user.name}')">Enable User</button>` : ''
+                        }
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function updateUserStatus(userId, newStatus, userName) {
+            try {
+                showMessage(`Updating ${userName} to ${newStatus}...`, 'info');
+                
+                const { data, error } = await supabase
+                    .from('users')
+                    .update({ status: newStatus })
+                    .eq('id', userId)
+                    .select();
+                
+                if (error) throw error;
+                
+                showMessage(`✅ ${userName} status updated to ${newStatus}!`, 'success');
+                loadUsers(); // Reload the list
+                
+            } catch (error) {
+                console.error('Error updating user status:', error);
+                showMessage(`❌ Error updating ${userName}: ${error.message}`, 'error');
+            }
+        }
+        
+        async function activateAllPending() {
+            try {
+                showMessage('Activating all pending users...', 'info');
+                
+                const { data, error } = await supabase
+                    .from('users')
+                    .update({ status: 'active' })
+                    .eq('status', 'pending')
+                    .select();
+                
+                if (error) throw error;
+                
+                showMessage(`✅ Activated ${data.length} pending users!`, 'success');
+                loadUsers(); // Reload the list
+                
+            } catch (error) {
+                console.error('Error activating users:', error);
+                showMessage(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        // Load users on page load
+        window.onload = loadUsers;
+    </script>
+</body>
+</html> 

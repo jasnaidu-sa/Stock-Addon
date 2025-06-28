@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Supabase Client Test</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        pre { background: #f0f0f0; padding: 10px; border-radius: 4px; }
+        button { padding: 10px; margin: 5px; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Supabase Client Test</h1>
+    <p>This page tests the Supabase JS client library authentication</p>
+    
+    <div>
+        <h3>Login Test</h3>
+        <div>
+            <input type="email" id="email" placeholder="Email" value="jnaidu@thebedshop.co.za">
+            <input type="password" id="password" placeholder="Password" value="admin123">
+            <button onclick="testLogin()">Test Login</button>
+        </div>
+    </div>
+    
+    <div id="result"></div>
+    
+    <script>
+        const resultDiv = document.getElementById('result');
+        // Hardcode the Supabase credentials directly in this file
+        const SUPABASE_URL = 'https://cfjvskafvcljvxnawccs.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmanZza2FmdmNsanZ4bmF3Y2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2MzczODQsImV4cCI6MjA1NjIxMzM4NH0.0kEvw4fWwp0Qw2fSXtmvcstZK3pYhS2yXiS0h68DEx0';
+        
+        // Initialize the client
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        function log(text, isError = false) {
+            console.log(text);
+            const element = document.createElement('div');
+            element.className = isError ? 'error' : 'success';
+            element.textContent = text;
+            resultDiv.appendChild(element);
+        }
+        
+        function logObject(obj, title) {
+            console.log(title, obj);
+            const titleEl = document.createElement('h4');
+            titleEl.textContent = title;
+            resultDiv.appendChild(titleEl);
+            
+            const pre = document.createElement('pre');
+            pre.textContent = JSON.stringify(obj, null, 2);
+            resultDiv.appendChild(pre);
+        }
+        
+        // Show the initial config
+        log(`Supabase URL: ${SUPABASE_URL}`);
+        log(`Supabase Key (first 10 chars): ${SUPABASE_KEY.substring(0, 10)}...`);
+        
+        // Check if we can decode the JWT
+        try {
+            const parts = SUPABASE_KEY.split('.');
+            if (parts.length === 3) {
+                const payload = JSON.parse(atob(parts[1]));
+                log('JWT token structure is valid');
+                logObject(payload, 'Token payload:');
+                
+                // Check for expiration
+                if (payload.exp) {
+                    const expDate = new Date(payload.exp * 1000);
+                    const now = new Date();
+                    if (expDate > now) {
+                        log(`Token is not expired. Expires: ${expDate.toLocaleString()}`);
+                    } else {
+                        log(`Token is expired! Expired: ${expDate.toLocaleString()}`, true);
+                    }
+                }
+            }
+        } catch (e) {
+            log(`Error decoding JWT: ${e.message}`, true);
+        }
+        
+        async function testLogin() {
+            const divider = document.createElement('hr');
+            resultDiv.appendChild(divider);
+            
+            log('Starting login test with Supabase client...');
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                log('Please enter email and password', true);
+                return;
+            }
+            
+            try {
+                log(`Attempting to login with email: ${email}`);
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+                
+                if (error) {
+                    log(`Login failed: ${error.message}`, true);
+                    logObject(error, 'Error Details:');
+                } else {
+                    log('Login successful!');
+                    logObject(data, 'User Data:');
+                    
+                    // Try to fetch some data to verify session
+                    log('Trying to fetch user profile data...');
+                    const { data: profileData, error: profileError } = await supabase
+                        .from('users')
+                        .select('*')
+                        .eq('id', data.user.id)
+                        .single();
+                        
+                    if (profileError) {
+                        log(`Error fetching profile: ${profileError.message}`, true);
+                    } else {
+                        log('Successfully fetched user profile!');
+                        logObject(profileData, 'Profile Data:');
+                    }
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`, true);
+            }
+        }
+    </script>
+</body>
+</html> 

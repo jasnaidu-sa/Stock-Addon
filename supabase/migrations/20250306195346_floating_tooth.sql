@@ -31,12 +31,11 @@
 */
 
 -- Drop existing objects with proper dependency order
-DROP TRIGGER IF EXISTS set_order_number_trigger ON orders CASCADE;
+DROP TABLE IF EXISTS orders CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 DROP FUNCTION IF EXISTS set_order_number() CASCADE;
 DROP FUNCTION IF EXISTS generate_order_number() CASCADE;
 DROP SEQUENCE IF EXISTS order_number_seq CASCADE;
-DROP TABLE IF EXISTS orders CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
 
 -- Create users table
 CREATE TABLE users (

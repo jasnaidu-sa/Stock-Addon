@@ -1,217 +1,149 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { CartProvider } from '@/components/cart/cart-provider';
-import { AuthPage } from '@/pages/auth';
-import LoginPage from '@/pages/login';
-import SignupPage from '@/pages/signup';
+import { Layout } from '@/components/layout/layout';
+import SignupPage from '@/pages/signup'; 
 import ResetPasswordPage from '@/pages/auth/reset-password';
 import { DashboardPage } from '@/pages/dashboard';
-import { CategoryPage } from '@/pages/category/[id]';
-import AdminPage from '@/pages/admin';
-import { Layout } from '@/components/layout/layout';
-import { testSupabaseConnection } from './lib/supabase-test';
-import { BackgroundPaths } from '@/components/ui/background-paths';
-import React from 'react';
-import { useToast } from '@/hooks/use-toast';
-import ProfilePage from '@/pages/profile';
+import { CategoryPage } from '@/pages/category/[id]'; 
+import AdminPage from '@/pages/admin'; 
 import MattressPage from '@/pages/mattresses';
+import ClerkLoginPage from '@/pages/clerk-login';
+import { ClerkTestPage } from '@/pages/clerk-test';
+import {
+  SignIn, 
+  SignUp, 
+  useAuth, 
+  useUser,
+  useClerk
+} from "@clerk/clerk-react";
+import { useEffect, useState } from 'react'; // Added useState
+// Import only the initializer function
+import { initializeSupabaseWithClerk } from './lib/supabase'; 
+import './App.css';
+
 
 function App() {
-  const [session, setSession] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { getToken, isLoaded, isSignedIn } = useAuth(); 
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const [supabaseReady, setSupabaseReady] = useState(false); // New state for Supabase readiness
 
+  // Initialize Supabase with Clerk's getToken - only once when Clerk is loaded
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('=== Initial Session Check ===', {
-        hasSession: !!session,
-        userId: session?.user?.id,
-        email: session?.user?.email
-      });
-      setSession(session);
-      
-      // Get user role if session exists
-      if (session?.user) {
-        getUserRole(session.user.id);
-      } else {
-        setLoading(false);
+    // Ensure Clerk is loaded and getToken function is available
+    if (isLoaded && typeof getToken === 'function') { 
+      console.log('[App.tsx DEBUG] Clerk is loaded and getToken is available. Attempting to initialize Supabase.');
+      try {
+        initializeSupabaseWithClerk(getToken); // Pass the actual getToken function
+        setSupabaseReady(true); // Mark Supabase as ready
+        console.log('[App.tsx DEBUG] Supabase initialized with Clerk successfully.');
+      } catch (error) {
+        console.error('[App.tsx DEBUG] Error initializing Supabase with Clerk:', error);
+        // Optionally, set an error state here to inform the user
       }
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('=== Auth State Changed ===', {
-        event: _event,
-        hasSession: !!session,
-        userId: session?.user?.id,
-        email: session?.user?.email
-      });
-      setSession(session);
-      
-      // Update user role when auth state changes
-      if (session?.user) {
-        getUserRole(session.user.id);
-      } else {
-        setUserRole(null);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Fetch user role and status from database
-  const getUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase.rpc('get_user_role', {
-        user_id: userId
-      });
-      
-      if (error) throw error;
-      
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        throw new Error('User data not found');
-      }
-      
-      const userData = data[0];
-      
-      // If user is not active, sign them out
-      if (userData.status !== 'active') {
-        console.log('User is not active, signing out');
-        await supabase.auth.signOut();
-        setUserRole(null);
-        
-        toast({
-          title: 'Account Not Active',
-          description: 'Your account is pending approval. Please contact an administrator.',
-          variant: 'destructive',
-        });
-        return;
-      }
-      
-      setUserRole(userData.role);
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-      setUserRole(null);
-    } finally {
-      setLoading(false);
+    } else {
+      console.log('[App.tsx DEBUG] Waiting for Clerk (isLoaded and getToken) before initializing Supabase.');
     }
+  }, [isLoaded, getToken]); // Dependencies are correct
+  
+  // Handle sign out with redirect to clerk-login
+  // Export to window to make it accessible from layout components
+  window.handleClerkSignOut = () => {
+    signOut(() => {
+      window.location.href = '/clerk-login';
+    });
   };
 
-  // Test Supabase connection on app load
-  useEffect(() => {
-    testSupabaseConnection().then((result) => {
-      console.log('=== Initial Supabase Connection Test ===', {
-        success: result.success,
-        hasAuthData: !!result.authData,
-        error: result.error
-      });
-    });
-  }, []);
-
-  if (loading) {
+  // Updated loading condition: wait for Clerk and Supabase initialization
+  if (!isLoaded || !supabaseReady) { 
     return (
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-white dark:bg-neutral-950">
         <div className="absolute inset-0">
-          <BackgroundPaths title="" />
+          <div className="h-full w-full bg-white bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-neutral-950 dark:bg-[radial-gradient(#ffffff33_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_0%,transparent_100%)]"></div>
         </div>
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-          <p className="text-muted-foreground">Loading your experience...</p>
-        </div>
+        <p className="z-10 text-lg md:text-7xl bg-clip-text text-transparent bg-gradient-to-b from-neutral-200 to-neutral-600 font-sans font-bold">
+          Loading Application...
+        </p>
       </div>
     );
   }
 
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <Toaster />
       <CartProvider>
-        <BrowserRouter>
-          <Routes>
+        {/* Debug info - show when Clerk is loaded/user is signed in */}
+        <div className="hidden">
+          Debug: {isLoaded ? 'Clerk Loaded' : 'Clerk Loading'} | 
+          {isSignedIn ? 'User Signed In' : 'User Not Signed In'} |
+          Supabase: {supabaseReady ? 'Ready' : 'Initializing...'}
+        </div>
+        <Routes>
+            <Route path="/clerk-login/*" element={<ClerkLoginPage />} />
+            <Route path="/clerk-test" element={<ClerkTestPage />} />
+            <Route path="/sign-in/*" element={<SignIn routing="path" path="/sign-in" fallbackRedirectUrl="/clerk-login" />} />
+            <Route path="/sign-up/*" element={<SignUp routing="path" path="/sign-up" fallbackRedirectUrl="/clerk-login" />} />
+            
+            <Route path="/signup-legacy" element={<SignupPage />} /> 
             <Route 
-              path="/auth" 
-              element={
-                !session ? (
-                  <AuthPage />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/auth/signup" 
-              element={
-                !session ? (
-                  <SignupPage />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
-            <Route 
-              path="/auth/reset-password" 
+              path="/reset-password" 
               element={<ResetPasswordPage />} 
             />
-            <Route 
-              path="/login" 
-              element={
-                !session ? (
-                  <LoginPage />
-                ) : (
-                  <Navigate to="/" replace />
-                )
-              } 
-            />
+            
+            <Route path="/verify" element={<Navigate to="/auth/verify" />} />
+            <Route path="/auth/verify" element={<Outlet />} />
+            
             <Route 
               path="/admin/*" 
-              element={
-                loading ? (
-                  <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : session && userRole === 'admin' ? (
-                  <AdminPage />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              } 
+              element={isSignedIn && user?.publicMetadata?.role === 'admin' ? <AdminPage /> : <Navigate to={isSignedIn ? "/" : "/clerk-login"} replace />}
             />
-            <Route 
-              element={
-                session ? (
-                  <Layout />
-                ) : (
-                  <Navigate to="/login" replace />
-                )
-              }
-            >
-              <Route index element={<DashboardPage />} />
-              <Route path="/category/:id" element={<CategoryPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/category/mattress" element={<MattressPage />} />
+
+            {/* Protected routes with Layout */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                {/* Dashboard route */}
+                <Route 
+                  path="/" 
+                  element={
+                    user?.publicMetadata?.role === 'admin' 
+                      ? <Navigate to="/admin/orders" replace /> 
+                      : <DashboardPage />
+                  } 
+                />
+                <Route path="/category/:id" element={<CategoryPage />} />
+                <Route path="/mattresses" element={<MattressPage />} />
+              </Route>
             </Route>
+            
+            
             <Route 
               path="*" 
               element={
-                <Navigate 
-                  to={session ? "/" : "/login"} 
-                  replace 
-                />
-              } 
+                isSignedIn 
+                  ? (user?.publicMetadata?.role === 'admin' 
+                    ? <Navigate to="/admin" replace /> 
+                    : <Navigate to="/clerk-login" replace />)
+                  : <Navigate to="/clerk-login" replace />
+              }
             />
-          </Routes>
-        </BrowserRouter>
-        <Toaster />
+        </Routes>
       </CartProvider>
     </ThemeProvider>
   );
-}
+};
+
+// Protected route component
+const ProtectedRoute = () => {
+  const { isLoaded, isSignedIn } = useAuth();
+  
+  if (!isLoaded) {
+    return <div>Loading auth...</div>;
+  }
+  
+  return isSignedIn ? <Outlet /> : <Navigate to="/clerk-login" replace />;
+};
+
 
 export default App;

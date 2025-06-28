@@ -1,4 +1,13 @@
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
+
+// Get Supabase client on demand to ensure it's initialized with the latest auth context
+const getClient = () => {
+  const client = getSupabaseClient();
+  if (!client) {
+    console.error('Supabase client not initialized');
+  }
+  return client;
+};
 
 /**
  * Fetches product codes from all category tables based on stock_item_id
@@ -29,7 +38,13 @@ export async function fetchProductCodes(stockItemIds: string[]): Promise<Record<
   // Check each table for the stock item IDs
   for (const { table, codeField, category } of categoryTables) {
     try {
-      const { data, error } = await supabase
+      const client = getClient();
+      if (!client) {
+        console.error(`Supabase client not initialized when searching ${table}`);
+        continue;
+      }
+      
+      const { data, error } = await client
         .from(table)
         .select(`id, ${codeField}`)
         .in('id', validIds);
@@ -111,8 +126,15 @@ export function getProductCode(
  */
 export async function fetchBaseInfoByCode(baseCodeFromName: string): Promise<{ id: string, code: string } | null> {
   try {
+    // Get the client
+    const client = getClient();
+    if (!client) {
+      console.error('Supabase client not initialized when searching base table');
+      return null;
+    }
+    
     // Try to find the base in the base table using the code
-    const { data, error } = await supabase
+    const { data, error } = await client
       .from('base')
       .select('id, code')
       .eq('code', baseCodeFromName)
@@ -227,8 +249,15 @@ export async function updateOrderItemCodes(orderId: string): Promise<boolean> {
   }
 
   try {
+    // Get the client
+    const client = getClient();
+    if (!client) {
+      console.error('Supabase client not initialized when updating order item codes');
+      return false;
+    }
+    
     // 1. Get all items for this order
-    const { data: orderItems, error: itemsError } = await supabase
+    const { data: orderItems, error: itemsError } = await client
       .from('order_items')
       .select('*')
       .eq('order_id', orderId);
@@ -258,7 +287,13 @@ export async function updateOrderItemCodes(orderId: string): Promise<boolean> {
           updateData.stock_item_id = item.stock_item_id;
         }
         
-        const { error } = await supabase
+        const client = getClient();
+        if (!client) {
+          console.error('Supabase client not initialized when updating order item');
+          continue;
+        }
+        
+        const { error } = await client
           .from('order_items')
           .update(updateData)
           .eq('id', item.id);

@@ -4,14 +4,15 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { OrderTable } from '@/components/shared/order-table';
 import type { Order, OrderStatus } from '@/types/order';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
 export function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterValue, setFilterValue] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 import { formatCurrency, cn } from '@/lib/utils';
 import { Download, X, Calendar as CalendarIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
@@ -49,6 +49,8 @@ const categoryTableMap: Record<string, { table: string; nameField: string; price
 const ORDER_STATUSES = ['pending', 'approved', 'review', 'completed', 'cancelled'];
 
 export function ExportPage() {
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase client
   const [orders, setOrders] = useState<Order[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,14 +99,22 @@ export function ExportPage() {
       
       // Create complete order objects with nested user and store data
       const ordersWithRelations = (ordersData || []).map(order => {
-        const user = order.user_id ? usersData.find(user => user.id === order.user_id) : null;
+        // Safely handle user lookup with null checks
+        const user = order.user_id && usersData ? usersData.find(user => user && user.id === order.user_id) : null;
+        
         return {
           ...order,
-          user: user,
-          store: { name: order.store_name },
+          user: user || null,
+          store: { name: order.store_name || 'Unknown Store' },
           // Add these fields for the AdminOrderTable component
-          owner_name: user ? (user.name || user.email) : 'N/A',
-          customer_name: null // We don't need the current user field
+          owner_name: user ? (user.name || user.email || 'Unknown User') : 'N/A',
+          customer_name: null, // We don't need the current user field
+          // Make sure all fields required by AdminOrderTable are present
+          order_number: order.order_number || `ORD-${order.id}`,
+          status: order.order_status || order.status || 'pending',
+          created_at: order.created_at || new Date().toISOString(),
+          quantity: order.items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) || 0,
+          value: order.total_price || 0
         };
       });
 
@@ -123,34 +133,49 @@ export function ExportPage() {
   };
 
   const filteredOrders = useMemo(() => {
-    console.log("Recalculating filteredOrders..."); // Log when filter recalculates
+    console.log("Recalculating filteredOrders...", orders?.length || 0); // Log when filter recalculates
+    
+    // Guard against orders being undefined or null
+    if (!orders || !Array.isArray(orders)) {
+      console.warn("Orders is not a valid array", orders);
+      return [];
+    }
+    
     return orders.filter(order => {
-      const searchStr = filterValue.toLowerCase();
+      // Skip invalid orders
+      if (!order) return false;
+      
+      try {
+        const searchStr = (filterValue || '').toLowerCase();
 
-      // Log the order being checked
-      // console.log("Checking order:", order);
+        // Handle cases where order properties might be undefined
+        const orderNumber = (order.order_number || '').toLowerCase();
+        const userName = (order.user?.name || '').toLowerCase();
+        const userEmail = (order.user?.email || '').toLowerCase();
+        const status = order.status || '';
+        
+        const matchesSearch = !searchStr ||
+          orderNumber.includes(searchStr) ||
+          userName.includes(searchStr) ||
+          userEmail.includes(searchStr) ||
+          (order.store_name || '').toLowerCase().includes(searchStr);
 
-      const matchesSearch = !searchStr ||
-        order.order_number?.toLowerCase().includes(searchStr) ||
-        order.user?.name?.toLowerCase().includes(searchStr) ||
-        order.user?.email?.toLowerCase().includes(searchStr);
+        const orderDate = order.created_at ? new Date(order.created_at) : new Date();
+        const matchesDate = !dateRange || 
+          ((!dateRange.from || orderDate >= dateRange.from) && 
+           (!dateRange.to || orderDate <= addDays(dateRange.to, 1)));
 
-      const orderDate = new Date(order.created_at);
-      const matchesDate = !dateRange || ((!dateRange.from || orderDate >= dateRange.from) && (!dateRange.to || orderDate <= addDays(dateRange.to, 1)));
+        const matchesCustomer = selectedCustomer === 'all' || order.user_id === selectedCustomer;
 
-      const matchesCustomer = selectedCustomer === 'all' || order.user_id === selectedCustomer;
+        const matchesStatus = selectedStatuses.length === 0 ||
+          selectedStatuses.length === ORDER_STATUSES.length || 
+          selectedStatuses.includes(status);
 
-      const matchesStatus = selectedStatuses.length === ORDER_STATUSES.length || selectedStatuses.includes(order.status);
-
-      // Log individual filter results for this order
-      // console.log(`Order ${order.order_number}: search=${matchesSearch}, date=${matchesDate}, customer=${matchesCustomer}, status=${matchesStatus}`);
-
-      const shouldInclude = matchesSearch && matchesDate && matchesCustomer && matchesStatus;
-
-      // Log if the order is included or excluded
-      // console.log(`Order ${order.order_number} included: ${shouldInclude}`);
-
-      return shouldInclude;
+        return matchesSearch && matchesDate && matchesCustomer && matchesStatus;
+      } catch (err) {
+        console.error("Error filtering order:", err, order);
+        return false;
+      }
     });
   }, [orders, filterValue, dateRange, selectedCustomer, selectedStatuses]);
 
@@ -341,19 +366,19 @@ export function ExportPage() {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="ml-4 text-muted-foreground">Loading orders and filters...</p> // Updated text
+        <p className="ml-4 text-muted-foreground">Loading orders and filters...</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto py-6 space-y-6 min-h-[800px]">
        <h2 className="text-2xl font-semibold tracking-tight">Export Orders</h2>
        <p className="text-sm text-muted-foreground">
          Select filters below and click "Export to Excel" to download the order data.
        </p>
         {/* Filters and Export Section Card */}
-        <Card>
+        <Card className="min-w-[1000px]">
             <CardHeader>
                 <CardTitle className="text-lg">Filter & Export Orders</CardTitle>
             </CardHeader>

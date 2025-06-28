@@ -1,38 +1,18 @@
 import { Header } from './header';
 import { Outlet, useLocation } from 'react-router-dom';
 import { CartSheet } from '@/components/cart/cart-sheet';
-import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
-import { AdminRedirect } from './admin-redirect';
+// Removed UserRedirect import as it's causing redirect loops
 
 export function Layout() {
   const location = useLocation();
   const showCart = location.pathname.startsWith('/category/');
-  const { toast } = useToast();
-
-  useEffect(() => {
-    // Verify session on layout mount and route changes
-    const checkSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error || !session) {
-        toast({
-          title: 'Session Error',
-          description: 'Please log in again.',
-          variant: 'destructive',
-        });
-        window.location.href = '/login';
-        return;
-      }
-    };
-
-    checkSession();
-  }, [location.pathname, toast]);
+  
+  // No session check needed here - Clerk handles authentication
+  // and redirects automatically via ClerkProvider in your app
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <AdminRedirect />
+      {/* UserRedirect removed to prevent redirect loops */}
       
       <Header />
       <div className="flex-1">

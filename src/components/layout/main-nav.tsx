@@ -2,24 +2,29 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'react-router-dom';
-import { Bed, Sofa, Package, Box, HomeIcon, UserIcon, Settings } from 'lucide-react';
+import { Bed, Sofa, Package, Box, HomeIcon, Settings } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
+import { useClerk, useUser } from '@clerk/clerk-react';
 
 export function MainNav() {
+  const supabase = getSupabaseClient();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const { isSignedIn } = useUser();
+  const { user } = useClerk();
 
-  // Check if current user is admin
+  // Check if current user is admin using Clerk user ID
   useEffect(() => {
     const checkAdminStatus = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
+      if (isSignedIn && user && supabase) {
+        const clerkUserId = user.id;
+        
+        // Query Supabase for admin role using clerk_id
         const { data } = await supabase
           .from('users')
           .select('role')
-          .eq('id', session.user.id)
+          .eq('clerk_id', clerkUserId)
           .single();
         
         setIsAdmin(data?.role === 'admin');
@@ -27,7 +32,7 @@ export function MainNav() {
     };
     
     checkAdminStatus();
-  }, []);
+  }, [isSignedIn, user, supabase]);
 
   const categories = [
     {
@@ -75,12 +80,6 @@ export function MainNav() {
       label: 'Dashboard',
       icon: HomeIcon,
       active: location.pathname === '/',
-    },
-    {
-      href: '/profile',
-      label: 'Profile',
-      icon: UserIcon,
-      active: location.pathname === '/profile',
     },
     {
       href: '/admin',

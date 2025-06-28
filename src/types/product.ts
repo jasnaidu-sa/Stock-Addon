@@ -1,8 +1,7 @@
 export interface Base {
   id: string;
-  base_code: string;
+  code: string;
   description: string;
-  size: string;
   price: number;
   created_at?: string;
 }
@@ -20,6 +19,8 @@ export interface Product {
   base_qty?: number;
   set_price?: number;
   size?: string;
+  image_url?: string;      // Added for cart item consistency
+  stock_item_id?: string;  // Added for cart item consistency
   // Base relationship
   base?: Base;
   // For other product types

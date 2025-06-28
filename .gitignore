@@ -10,7 +10,9 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
+# Only ignore Vite's local files, not .env.local
+vite.config.*.local.ts
+vite.config.*.local.js
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +24,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

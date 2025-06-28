@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';;
 
 const orderSchema = z.object({
   store_name: z.string().min(1, 'Store name is required'),
@@ -40,7 +40,8 @@ const orderSchema = z.object({
 type OrderFormValues = z.infer<typeof orderSchema>;
 
 export function NewOrderPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const supabase = getSupabaseClient(); // Initialize Supabase clientconst [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();

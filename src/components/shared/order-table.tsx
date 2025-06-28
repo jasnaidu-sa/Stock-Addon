@@ -20,7 +20,7 @@ import { AlertCircle, Check, X } from "lucide-react"
 import { OrderReview } from "@/components/order/order-review"
 import type { Order } from "@/types/order"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from '@/lib/supabase';
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { fetchProductCodes, getProductCode } from "@/lib/product-utils"
@@ -52,6 +52,7 @@ export function OrderTable({
   onOrderUpdated,
   showActions = false,
 }: OrderTableProps) {
+  const supabase = getSupabaseClient(); // Initialize Supabase client
   const [expandedOrderId, setExpandedOrderId] = React.useState<string | null>(null);
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [processing, setProcessing] = useState<Record<string, boolean>>({});
@@ -329,13 +330,13 @@ export function OrderTable({
                                     }
                                       
                                     return (
-                                      <TableRow key={item.id || index}>
+                                    <TableRow key={item.id || index}>
                                         <TableCell className="py-3 font-medium">{productCode}</TableCell>
                                         <TableCell className="py-3">{productDesc}</TableCell>
-                                        <TableCell className="text-right py-3">{formatCurrency(item.price)}</TableCell>
-                                        <TableCell className="text-right py-3">{item.quantity}</TableCell>
-                                        <TableCell className="text-right py-3">{formatCurrency(item.total)}</TableCell>
-                                      </TableRow>
+                                      <TableCell className="text-right py-3">{formatCurrency(item.price)}</TableCell>
+                                      <TableCell className="text-right py-3">{item.quantity}</TableCell>
+                                      <TableCell className="text-right py-3">{formatCurrency(item.total)}</TableCell>
+                                    </TableRow>
                                     );
                                   })}
                                 </TableBody>
