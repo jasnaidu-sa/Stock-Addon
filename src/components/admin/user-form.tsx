@@ -19,8 +19,8 @@ const userSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   company_name: z.string().min(1, 'Company name is required'),
-  group: z.enum(['Franchisee', 'Regional']),
-  role: z.enum(['user', 'admin']),
+  group: z.enum(['Franchisee', 'Regional', 'Corporate', 'store']),
+  role: z.enum(['admin', 'customer', 'regional_manager', 'area_manager', 'store_manager']),
 });
 
 export type UserFormData = z.infer<typeof userSchema>;
@@ -52,7 +52,7 @@ export function UserForm({ onSuccess, initialData, isEdit = false, userId, clerk
       lastName: initialData?.lastName || '',
       company_name: initialData?.company_name || '',
       group: initialData?.group || 'Franchisee',
-      role: initialData?.role || 'user',
+      role: initialData?.role || 'customer',
     },
   });
 
@@ -251,7 +251,7 @@ export function UserForm({ onSuccess, initialData, isEdit = false, userId, clerk
             <Label htmlFor="group">Group</Label>
             <Select
               defaultValue={form.getValues('group')}
-              onValueChange={(value) => form.setValue('group', value as 'Franchisee' | 'Regional')}
+              onValueChange={(value) => form.setValue('group', value as 'Franchisee' | 'Regional' | 'Corporate' | 'store')}
               disabled={isLoading}
             >
               <SelectTrigger className={form.formState.errors.group ? 'border-destructive' : ''}>
@@ -260,6 +260,8 @@ export function UserForm({ onSuccess, initialData, isEdit = false, userId, clerk
               <SelectContent>
                 <SelectItem value="Franchisee">Franchisee</SelectItem>
                 <SelectItem value="Regional">Regional</SelectItem>
+                <SelectItem value="Corporate">Corporate</SelectItem>
+                <SelectItem value="store">Store</SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.group && (
@@ -273,15 +275,18 @@ export function UserForm({ onSuccess, initialData, isEdit = false, userId, clerk
             <Label htmlFor="role">Role</Label>
             <Select
               defaultValue={form.getValues('role')}
-              onValueChange={(value) => form.setValue('role', value as 'user' | 'admin')}
+              onValueChange={(value) => form.setValue('role', value as 'admin' | 'customer' | 'regional_manager' | 'area_manager' | 'store_manager')}
               disabled={isLoading}
             >
               <SelectTrigger className={form.formState.errors.role ? 'border-destructive' : ''}>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="user">User</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="customer">Customer</SelectItem>
+                <SelectItem value="regional_manager">Regional Manager</SelectItem>
+                <SelectItem value="area_manager">Area Manager</SelectItem>
+                <SelectItem value="store_manager">Store Manager</SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.role && (

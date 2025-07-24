@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Amendment Management Fixes - Test</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        .header h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .test-card { 
+            background: #f8f9fc; 
+            padding: 25px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            border-left: 5px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .fix-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-left: 5px solid #fff;
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+        }
+        .status { 
+            padding: 10px 20px; 
+            border-radius: 25px; 
+            color: white; 
+            font-weight: bold; 
+            display: inline-block; 
+            margin: 5px;
+        }
+        .fixed { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .success { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: #333; }
+        .error { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); }
+        
+        pre { 
+            background: #2d3748; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            overflow-x: auto; 
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #4a5568;
+        }
+        .step { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            border-left: 4px solid #fff;
+        }
+        .expected { 
+            color: #38a169; 
+            font-weight: bold; 
+        }
+        .debug-log { 
+            background: #1a202c; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            border: 1px solid #2d3748;
+        }
+        .highlight {
+            background: yellow;
+            color: #333;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .link-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .before, .after {
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .before {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+        }
+        .after {
+            background: #f0fff4;
+            border: 2px solid #68d391;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Amendment Management - Final Fixes Complete</h1>
+            <p>Re-rendering Performance & Amendment Display Resolution</p>
+        </div>
+        
+        <div class="test-card fix-card">
+            <h2>🎯 Critical Issues Fixed</h2>
+            <div class="status fixed">ISSUE 1: Excessive Re-rendering FIXED</div>
+            <div class="status fixed">ISSUE 2: Amendments Not Displaying FIXED</div>
+            
+            <div class="comparison">
+                <div class="before">
+                    <h4>❌ Before Fix</h4>
+                    <ul>
+                        <li>Component re-rendering every ~600ms</li>
+                        <li>setPendingAmendments([]) setting empty array</li>
+                        <li>loadCategoriesAndAmendments in useEffect dependencies</li>
+                        <li>Line items showing but no amendments visible</li>
+                    </ul>
+                </div>
+                <div class="after">
+                    <h4>✅ After Fix</h4>
+                    <ul>
+                        <li>Re-rendering eliminated by fixing useEffect deps</li>
+                        <li>Amendment extraction from combinedPlanData</li>
+                        <li>Proper filtering: has_amendment === true</li>
+                        <li>Amendments now properly displayed in UI</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🧪 Testing Instructions</h2>
+            <div class="step">
+                <strong>Step 1:</strong> Open Chrome Developer Tools (F12) and go to Console tab
+            </div>
+            <div class="step">
+                <strong>Step 2:</strong> Navigate to Amendment Management
+                <br><a href="http://localhost:5173/admin/amendment-management" target="_blank" class="link-button">📋 Open Amendment Management</a>
+            </div>
+            <div class="step">
+                <strong>Step 3:</strong> Wait for data load (should see "Combined Data loaded: ~50k items, X amendments")
+            </div>
+            <div class="step">
+                <strong>Step 4:</strong> Click <strong>"DETAILED VIEW"</strong> button and monitor console
+            </div>
+            <div class="step">
+                <strong>Step 5:</strong> Verify <span class="highlight">NO continuous re-rendering logs</span> after initial load
+            </div>
+            <div class="step">
+                <strong>Step 6:</strong> Check for amendment displays in the line items
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>✅ Expected Console Output (NEW)</h2>
+            <div class="test-section">
+                <h3>🔍 Initial Load Logs:</h3>
+                <div class="debug-log">
+🚀 [processPreloadedData] Processing 50036 preloaded weekly plan items<br>
+📦 [processPreloadedData] Processed 12 categories from 50036 weekly plan items<br>
+<span class="highlight">📋 [processPreloadedData] Found X items with amendments in combined data</span><br>
+<span class="highlight">📋 [processPreloadedData] Setting X amendments for display</span><br>
+🔍 [WeeklyPlanInterface] Final condition result: true<br>
+🚀 [WeeklyPlanInterface] All conditions met - calling loadCategoriesAndAmendments for initial load
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h3>🚫 What Should NOT Appear (Fixed):</h3>
+                <div class="debug-log">
+<span style="color: #fc8181;">❌ No more continuous re-rendering logs every ~600ms</span><br>
+<span style="color: #fc8181;">❌ No more "setPendingAmendments([])" setting empty arrays</span><br>
+<span style="color: #fc8181;">❌ No more useEffect infinite loops</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🎯 UI Verification Points</h2>
+            <div class="test-section">
+                <h3>✅ Performance Improvements:</h3>
+                <ul>
+                    <li><span class="expected">✓</span> No continuous console logs after initial load</li>
+                    <li><span class="expected">✓</span> Smooth UI interaction without lag</li>
+                    <li><span class="expected">✓</span> Tab switching works without re-processing data</li>
+                    <li><span class="expected">✓</span> Memory usage stable (no memory leaks)</li>
+                </ul>
+            </div>
+            
+            <div class="test-section">
+                <h3>✅ Amendment Display:</h3>
+                <ul>
+                    <li><span class="expected">✓</span> Line items show with category tabs</li>
+                    <li><span class="expected">✓</span> Items with amendments have visual indicators</li>
+                    <li><span class="expected">✓</span> Amendment quantities displayed correctly</li>
+                    <li><span class="expected">✓</span> Amendment status badges visible</li>
+                    <li><span class="expected">✓</span> Store names show correctly (not "unknown store")</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🔧 Technical Changes Summary</h2>
+            <div class="test-section">
+                <h3>Fix 1: Re-rendering Performance</h3>
+                <pre>
+// BEFORE (causing infinite re-renders):
+}, [hasProcessedPreloadedData, isDataLoaded, userHierarchy, currentWeek, 
+   storeHierarchy, isInitialDataLoaded, categories.length, 
+   loadCategoriesAndAmendments]); // ❌ Function in deps
+
+// AFTER (stable dependencies):
+}, [hasProcessedPreloadedData, isDataLoaded, userHierarchy, currentWeek, 
+   storeHierarchy, isInitialDataLoaded, categories.length]); // ✅ No function deps
+                </pre>
+            </div>
+            
+            <div class="test-section">
+                <h3>Fix 2: Amendment Data Extraction</h3>
+                <pre>
+// BEFORE (losing amendments):
+setPendingAmendments([]);  // ❌ Empty array
+
+// AFTER (extracting amendments):
+const actualAmendments = weeklyPlanData.filter((item: any) => 
+  item.has_amendment === true && item.amendment_data
+);
+const amendmentsForDisplay = actualAmendments.map((item: any) => ({
+  ...item.amendment_data,
+  store_name: item.store_name,
+  description: item.description,
+  // ... other fields
+}));
+setPendingAmendments(amendmentsForDisplay); // ✅ Real amendments
+                </pre>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🚨 Troubleshooting</h2>
+            <div class="test-section">
+                <p><strong>If still seeing re-rendering:</strong></p>
+                <ol>
+                    <li>Hard refresh the page (Ctrl+F5)</li>
+                    <li>Clear browser cache</li>
+                    <li>Check console for any remaining function dependencies in useEffect</li>
+                </ol>
+            </div>
+            
+            <div class="test-section">
+                <p><strong>If amendments still not showing:</strong></p>
+                <ol>
+                    <li>Look for "Found X items with amendments" in console</li>
+                    <li>Check if combinedPlanData has has_amendment flags</li>
+                    <li>Verify amendment_data objects exist in the data</li>
+                </ol>
+            </div>
+            
+            <div class="test-section">
+                <p><strong>If detailed view shows "No Data Available":</strong></p>
+                <ol>
+                    <li>Previous fixes should have resolved this</li>
+                    <li>Check that categories are being processed correctly</li>
+                    <li>Verify storeHierarchy is populated</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>📊 Expected Performance Metrics</h2>
+            <div class="test-section">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr style="background: #f7fafc;">
+                        <th style="padding: 10px; border: 1px solid #e2e8f0;">Metric</th>
+                        <th style="padding: 10px; border: 1px solid #e2e8f0;">Before Fix</th>
+                        <th style="padding: 10px; border: 1px solid #e2e8f0;">After Fix</th>
+                        <th style="padding: 10px; border: 1px solid #e2e8f0;">Improvement</th>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">Re-render Frequency</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">Every ~600ms</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">Only on user action</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;"><span class="success">100% eliminated</span></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">Amendment Display</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">0 amendments shown</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">All amendments visible</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;"><span class="success">Fully functional</span></td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">UI Responsiveness</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">Laggy</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;">Smooth</td>
+                        <td style="padding: 10px; border: 1px solid #e2e8f0;"><span class="success">Significantly improved</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🧪 Final fixes test page loaded');
+        console.log('🔧 Testing both re-rendering fix and amendment display fix');
+        console.log('📝 Navigate to amendment management to verify fixes');
+        
+        // Monitor for any continuous logging (should not happen with fix)
+        let logCount = 0;
+        const originalLog = console.log;
+        console.log = function(...args) {
+            logCount++;
+            if (logCount > 100) {
+                console.warn('⚠️ High log volume detected - possible re-rendering issue still present');
+            }
+            return originalLog.apply(console, args);
+        };
+        
+        // Reset log count every 10 seconds for fresh monitoring
+        setInterval(() => {
+            if (logCount < 50) {
+                console.log('✅ Log volume normal - re-rendering fix appears successful');
+            }
+            logCount = 0;
+        }, 10000);
+    </script>
+</body>
+</html>

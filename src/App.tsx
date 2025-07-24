@@ -3,12 +3,28 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { CartProvider } from '@/components/cart/cart-provider';
 import { Layout } from '@/components/layout/layout';
+import { AdminLayout } from '@/components/layout/admin-layout';
+import { CustomerLayout } from '@/components/layout/customer-layout';
+import { ManagerLayout } from '@/components/layout/manager-layout';
 import SignupPage from '@/pages/signup'; 
 import ResetPasswordPage from '@/pages/auth/reset-password';
 import { DashboardPage } from '@/pages/dashboard';
 import { CategoryPage } from '@/pages/category/[id]'; 
-import AdminPage from '@/pages/admin'; 
 import MattressPage from '@/pages/mattresses';
+import AdminOrdersPage from '@/pages/admin/orders'; 
+import AdminUserManagementPage from '@/pages/admin/user-management'; 
+import { ExportPage } from '@/pages/admin/export'; 
+import { ExportOrdersPage } from '@/pages/export-orders-new';
+import WeeklyPlanManagement from '@/pages/admin/weekly-plan';
+import AmendmentManagement from '@/pages/admin/amendment-management';
+import HierarchyManagement from '@/pages/admin/hierarchy-management';
+import StoreManagerDashboard from '@/pages/store-manager/dashboard';
+import AreaManagerDashboard from '@/pages/area-manager/dashboard';
+import RegionalManagerDashboard from '@/pages/regional-manager/dashboard';
+import WeeklyPlan from '@/pages/weekly-plan';
+import TestStoreManagerPage from '@/pages/admin/test-store-manager';
+import TestAreaManagerPage from '@/pages/admin/test-area-manager';
+import TestRegionalManagerPage from '@/pages/admin/test-regional-manager';
 import ClerkLoginPage from '@/pages/clerk-login';
 import { ClerkTestPage } from '@/pages/clerk-test';
 import {
@@ -21,6 +37,8 @@ import {
 import { useEffect, useState } from 'react'; // Added useState
 // Import only the initializer function
 import { initializeSupabaseWithClerk } from './lib/supabase'; 
+import { AdminRouteGuard } from '@/components/auth/admin-route-guard';
+import { RoleRedirect } from '@/components/auth/role-redirect';
 import './App.css';
 
 
@@ -95,26 +113,81 @@ function App() {
             <Route path="/verify" element={<Navigate to="/auth/verify" />} />
             <Route path="/auth/verify" element={<Outlet />} />
             
+            {/* Admin routes with AdminLayout */}
             <Route 
-              path="/admin/*" 
-              element={isSignedIn && user?.publicMetadata?.role === 'admin' ? <AdminPage /> : <Navigate to={isSignedIn ? "/" : "/clerk-login"} replace />}
-            />
+              path="/admin" 
+              element={
+                <AdminRouteGuard fallbackPath="/">
+                  <AdminLayout />
+                </AdminRouteGuard>
+              }
+            >
+              <Route index element={<AdminOrdersPage />} />
+              <Route path="orders" element={<AdminOrdersPage />} />
+              <Route path="user-management" element={<AdminUserManagementPage />} />
+              <Route path="export-orders" element={<ExportPage />} />
+              <Route path="weekly-plan" element={<WeeklyPlanManagement />} />
+              <Route path="amendment-management" element={<AmendmentManagement />} />
+              <Route path="hierarchy" element={<HierarchyManagement />} />
+              <Route path="category/:id" element={<CategoryPage />} />
+              <Route path="mattresses" element={<MattressPage />} />
+              <Route path="test-store-manager" element={<TestStoreManagerPage />} />
+              <Route path="test-area-manager" element={<TestAreaManagerPage />} />
+              <Route path="test-regional-manager" element={<TestRegionalManagerPage />} />
+              <Route path="*" element={<div className='text-center p-10'>Admin Page Section Not Found</div>} />
+            </Route>
 
-            {/* Protected routes with Layout */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<Layout />}>
-                {/* Dashboard route */}
+            {/* Store Manager Routes */}
+            <Route 
+              path="/store-manager" 
+              element={
+                isSignedIn ? <ManagerLayout /> : <Navigate to="/clerk-login" replace />
+              }
+            >
+              <Route index element={<StoreManagerDashboard />} />
+            </Route>
+
+            {/* Area Manager Routes */}
+            <Route 
+              path="/area-manager" 
+              element={
+                isSignedIn ? <ManagerLayout /> : <Navigate to="/clerk-login" replace />
+              }
+            >
+              <Route index element={<AreaManagerDashboard />} />
+            </Route>
+
+            {/* Regional Manager Routes */}
+            <Route 
+              path="/regional-manager" 
+              element={
+                isSignedIn ? <ManagerLayout /> : <Navigate to="/clerk-login" replace />
+              }
+            >
+              <Route index element={<RegionalManagerDashboard />} />
+            </Route>
+
+            {/* Protected routes with CustomerLayout */}
+            <Route element={isSignedIn ? <CustomerLayout /> : <Navigate to="/clerk-login" replace />}>
+              
+                {/* Root route with role-based redirect */}
                 <Route 
                   path="/" 
-                  element={
-                    user?.publicMetadata?.role === 'admin' 
-                      ? <Navigate to="/admin/orders" replace /> 
-                      : <DashboardPage />
-                  } 
+                  element={<RoleRedirect />} 
+                />
+                {/* Dashboard route */}
+                <Route 
+                  path="/dashboard" 
+                  element={<DashboardPage />} 
+                />
+                {/* Weekly Plan route */}
+                <Route 
+                  path="/weekly-plan" 
+                  element={<WeeklyPlan />} 
                 />
                 <Route path="/category/:id" element={<CategoryPage />} />
                 <Route path="/mattresses" element={<MattressPage />} />
-              </Route>
+                <Route path="/export-orders" element={<ExportOrdersPage />} />
             </Route>
             
             
@@ -122,9 +195,7 @@ function App() {
               path="*" 
               element={
                 isSignedIn 
-                  ? (user?.publicMetadata?.role === 'admin' 
-                    ? <Navigate to="/admin" replace /> 
-                    : <Navigate to="/clerk-login" replace />)
+                  ? <Navigate to="/" replace />
                   : <Navigate to="/clerk-login" replace />
               }
             />
@@ -134,16 +205,7 @@ function App() {
   );
 };
 
-// Protected route component
-const ProtectedRoute = () => {
-  const { isLoaded, isSignedIn } = useAuth();
-  
-  if (!isLoaded) {
-    return <div>Loading auth...</div>;
-  }
-  
-  return isSignedIn ? <Outlet /> : <Navigate to="/clerk-login" replace />;
-};
+
 
 
 export default App;

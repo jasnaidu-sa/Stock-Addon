@@ -14,7 +14,7 @@ export default function ClerkLoginPage() {
           routing="path" 
           path="/clerk-login" 
           signUpUrl="/signup"
-          afterSignInUrl="/"
+          fallbackRedirectUrl="/"
           appearance={{
             elements: {
               rootBox: "w-full mx-auto max-w-md",

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useLocation } from 'react-router-dom';
-import { Bed, Sofa, Package, Box, HomeIcon, Settings } from 'lucide-react';
+import { Bed, Sofa, Package, Box, HomeIcon, Settings, Download, Calendar } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getSupabaseClient } from '@/lib/supabase';
 import { useClerk, useUser } from '@clerk/clerk-react';
@@ -11,27 +11,39 @@ export function MainNav() {
   const supabase = getSupabaseClient();
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isManager, setIsManager] = useState(false);
   const { isSignedIn } = useUser();
   const { user } = useClerk();
 
-  // Check if current user is admin using Clerk user ID
+  // Check if current user is admin or manager using Clerk user ID
   useEffect(() => {
-    const checkAdminStatus = async () => {
+    const checkUserRoles = async () => {
       if (isSignedIn && user && supabase) {
         const clerkUserId = user.id;
         
         // Query Supabase for admin role using clerk_id
-        const { data } = await supabase
+        const { data: userData } = await supabase
           .from('users')
-          .select('role')
+          .select('role, id')
           .eq('clerk_id', clerkUserId)
           .single();
         
-        setIsAdmin(data?.role === 'admin');
+        setIsAdmin(userData?.role === 'admin');
+        
+        // Check if user is a manager in the hierarchy
+        if (userData?.id) {
+          const { data: hierarchyData } = await supabase
+            .from('store_management_hierarchy')
+            .select('store_manager_id, area_manager_id, regional_manager_id')
+            .or(`store_manager_id.eq.${userData.id},area_manager_id.eq.${userData.id},regional_manager_id.eq.${userData.id}`)
+            .limit(1);
+          
+          setIsManager(hierarchyData && hierarchyData.length > 0);
+        }
       }
     };
     
-    checkAdminStatus();
+    checkUserRoles();
   }, [isSignedIn, user, supabase]);
 
   const categories = [
@@ -82,6 +94,20 @@ export function MainNav() {
       active: location.pathname === '/',
     },
     {
+      href: '/weekly-plan',
+      label: 'Weekly Plan',
+      icon: Calendar,
+      active: location.pathname === '/weekly-plan' || location.pathname.startsWith('/weekly-plan/'),
+      managerOnly: true
+    },
+    {
+      href: '/export-orders',
+      label: 'Export Orders',
+      icon: Download,
+      active: location.pathname === '/export-orders',
+      adminOnly: false
+    },
+    {
       href: '/admin',
       label: 'Admin',
       icon: Settings,
@@ -92,7 +118,12 @@ export function MainNav() {
   return (
     <nav className="flex items-center space-x-4 lg:space-x-6">
       {categories
-        .filter(route => route.href !== '/admin' || isAdmin)
+        .filter(route => {
+          if (route.href === '/admin') return isAdmin;
+          if (route.href === '/export-orders') return !isAdmin;
+          if (route.managerOnly) return isManager;
+          return true;
+        })
         .map((route) => (
           <Button
             key={route.href}

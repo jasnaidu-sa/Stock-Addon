@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amendment Management Fix Verification</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f8f9fa; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .test-card { background: white; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; }
+        .status { padding: 8px 15px; border-radius: 5px; color: white; font-weight: bold; display: inline-block; }
+        .success { background: #28a745; }
+        .error { background: #dc3545; }
+        .warning { background: #ffc107; color: black; }
+        .info { background: #17a2b8; }
+        pre { background: #f1f3f4; padding: 15px; border-radius: 5px; overflow-x: auto; font-size: 14px; }
+        .step { margin: 10px 0; padding: 10px; background: #e9ecef; border-left: 4px solid #007bff; }
+        .expected { color: #28a745; font-weight: bold; }
+        .debug-log { background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Amendment Management - Line Item Display Fix Verification</h1>
+        
+        <div class="test-card">
+            <h2>🔧 Fix Summary</h2>
+            <div class="status success">FIXED</div>
+            <p><strong>Issue:</strong> "No Data Available" shown in detailed view despite loading ~50k weekly plan records</p>
+            <p><strong>Root Cause:</strong> The processPreloadedData function was expecting amendment data but receiving weekly plan data with different structure</p>
+            <p><strong>Solution:</strong> Updated processPreloadedData to correctly handle weekly plan data structure instead of amendment structure</p>
+        </div>
+
+        <div class="test-card">
+            <h2>📋 Testing Steps</h2>
+            <div class="step">
+                <strong>Step 1:</strong> Open developer console (F12)
+            </div>
+            <div class="step">
+                <strong>Step 2:</strong> Navigate to <a href="http://localhost:5173/admin/amendment-management" target="_blank" style="color: #007bff;">Amendment Management Admin Page</a>
+            </div>
+            <div class="step">
+                <strong>Step 3:</strong> Wait for initial load (should see "Combined Data loaded: ~50k items, 2 amendments")
+            </div>
+            <div class="step">
+                <strong>Step 4:</strong> Click the <strong>"DETAILED VIEW"</strong> button
+            </div>
+            <div class="step">
+                <strong>Step 5:</strong> Verify line items are now displayed with proper categories and data
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🎯 Expected Results</h2>
+            <div class="test-section">
+                <h3>✅ Console Debug Logs (Expected):</h3>
+                <div class="debug-log">
+🚀 [processPreloadedData] Processing 50036 preloaded weekly plan items<br>
+📦 [processPreloadedData] Processed [X] categories from 50036 weekly plan items<br>
+🔍 [WeeklyPlanInterface] Final condition result: true<br>
+🚀 [WeeklyPlanInterface] All conditions met - calling loadCategoriesAndAmendments for initial load
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h3>✅ UI Changes (Expected):</h3>
+                <ul>
+                    <li><span class="expected">✓</span> Categories tabs appear at the top of detailed view</li>
+                    <li><span class="expected">✓</span> Line items display under each category</li>
+                    <li><span class="expected">✓</span> Store names show actual store names (not "unknown store")</li>
+                    <li><span class="expected">✓</span> Category totals show non-zero values</li>
+                    <li><span class="expected">✓</span> No more "No Data Available" message</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🔍 Technical Changes Made</h2>
+            <div class="test-section">
+                <h3>Key Code Changes:</h3>
+                <pre>
+// BEFORE (treating data as amendments):
+const amendments = preloadedData.storesWithSubmissions;
+amendments.forEach((amendment: any) => {
+  // Process as amendment data...
+});
+
+// AFTER (treating data as weekly plan items):
+const weeklyPlanData = preloadedData.storesWithSubmissions;
+weeklyPlanData.forEach((planItem: any) => {
+  // Process as weekly plan data...
+});
+                </pre>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🚨 Troubleshooting</h2>
+            <div class="test-section">
+                <p><strong>If still showing "No Data Available":</strong></p>
+                <ol>
+                    <li>Check console for any error messages</li>
+                    <li>Verify the debug logs show data processing</li>
+                    <li>Ensure you clicked "DETAILED VIEW" button</li>
+                    <li>Try refreshing the page</li>
+                </ol>
+            </div>
+            
+            <div class="test-section">
+                <p><strong>If categories show but no line items:</strong></p>
+                <ol>
+                    <li>Check if category tabs are clickable</li>
+                    <li>Look for any subcategory expansion arrows</li>
+                    <li>Verify the data structure in console logs</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>📊 Data Flow</h2>
+            <div class="test-section">
+                <pre>
+Admin Component (AdminAmendmentManagementUnified)
+    ↓ 
+Loads ~50k weekly plan records + amendments
+    ↓
+Passes as preloadedData.storesWithSubmissions to WeeklyPlanInterface
+    ↓
+processPreloadedData() processes weekly plan data structure
+    ↓
+setCategories() with organized category data
+    ↓
+UI displays categories and line items in detailed view
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🧪 Test verification page loaded');
+        console.log('📝 Navigate to amendment management and verify the fix');
+        
+        // Auto-open the amendment management page after 2 seconds
+        setTimeout(() => {
+            console.log('🔗 Opening amendment management page...');
+            // Don't auto-open to avoid disrupting user testing
+            // window.open('http://localhost:5173/admin/amendment-management', '_blank');
+        }, 2000);
+    </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
-import React from 'react';
+// Using React Fragment and JSX, but not directly referencing React
+import { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -57,8 +58,18 @@ export function OrderEditDialog({
   getProductCode
 }: OrderEditDialogProps) {
   
+  // Monitor item changes
+  useEffect(() => {
+    // Items are now properly managed by the parent component
+  }, [orderItems, currentOrder?.id]);
+  
   // Helper to get the appropriate class name for order items based on their state
   const getItemClassName = (item: OrderItem) => {
+    // Check if this is a historically deleted item
+    if (item.is_deleted) {
+      return 'line-through bg-red-100 text-gray-500';
+    }
+    // Check for items being modified in the current session
     if (isItemDeleted(item.id || '')) {
       return 'line-through bg-red-50';
     } else if (isItemAdded(item.id || '')) {
@@ -70,8 +81,23 @@ export function OrderEditDialog({
   };
   
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl">
+    <Dialog 
+      open={open} 
+      onOpenChange={onOpenChange}
+    >
+      <DialogContent 
+        className="sm:max-w-4xl" 
+        // Prevent dialog from closing when clicking outside
+        onPointerDownOutside={(e) => { 
+          // This prevents the close behavior
+          e.preventDefault();
+        }}
+        // Prevent dialog from closing when pressing escape
+        onEscapeKeyDown={(e) => {
+          // This prevents the escape key from closing the dialog
+          e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Edit Order {currentOrder?.id}</DialogTitle>
           <DialogDescription>
@@ -94,11 +120,14 @@ export function OrderEditDialog({
               <div className="border rounded p-2">
                 <h3 className="font-medium mb-2">Order Items</h3>
                 <div className="max-h-60 overflow-y-auto">
-                  {orderItems.map((item) => (
-                    <div 
-                      key={item.id} 
-                      className={`flex items-center justify-between p-2 border-b ${getItemClassName(item)}`}
-                    >
+                  {/* Display order items */}
+                  {(() => { console.log('Rendering items:', orderItems?.length); return null; })()}
+                  {orderItems && orderItems.length > 0 ? (
+                    orderItems.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className={`flex items-center justify-between p-2 border-b ${getItemClassName(item)}`}
+                      >
                       <div className="flex-grow">
                         <p className="font-medium">{item.product_name}</p>
                         <p className="text-sm text-gray-500">
@@ -109,39 +138,62 @@ export function OrderEditDialog({
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => onQuantityChange(item.id || '', Math.max(1, (item.quantity || 1) - 1))}
-                            disabled={isItemDeleted(item.id || '')}
+                        {item.is_deleted ? (
+                          // For historically deleted items, show a "Deleted" badge instead of controls
+                          <div 
+                            className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs cursor-help"
+                            title="This item was deleted in a previous edit and is shown for reference only"
                           >
-                            -
-                          </Button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-8 w-8" 
-                            onClick={() => onQuantityChange(item.id || '', (item.quantity || 1) + 1)}
-                            disabled={isItemDeleted(item.id || '')}
-                          >
-                            +
-                          </Button>
-                        </div>
-                        <Button 
-                          variant="destructive" 
-                          size="icon" 
-                          className="h-8 w-8" 
-                          onClick={() => onDeleteItem(item.id || '')}
-                          disabled={isItemDeleted(item.id || '')}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                            Previously Deleted
+                          </div>
+                        ) : (
+                          // For current items, show the normal controls
+                          <>
+                            <div className="flex items-center gap-1">
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-8 w-8" 
+                                onClick={() => onQuantityChange(item.id || '', Math.max(1, (item.quantity || 1) - 1))}
+                                disabled={isItemDeleted(item.id || '')}
+                              >
+                                -
+                              </Button>
+                              <span className="w-8 text-center">{item.quantity}</span>
+                              <Button 
+                                variant="outline" 
+                                size="icon" 
+                                className="h-8 w-8" 
+                                onClick={() => onQuantityChange(item.id || '', (item.quantity || 1) + 1)}
+                                disabled={isItemDeleted(item.id || '')}
+                              >
+                                +
+                              </Button>
+                            </div>
+                            <Button 
+                              variant="destructive" 
+                              size="icon" 
+                              className="h-8 w-8" 
+                              onClick={(e) => {
+                                // Stop event propagation to prevent dialog from closing
+                                e.stopPropagation();
+                                e.preventDefault();
+                                console.log('Delete button clicked for item:', item.id);
+                                // Call the delete handler with the item ID
+                                onDeleteItem(item.id || '');
+                              }}
+                              disabled={isItemDeleted(item.id || '')}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">No items in this order</div>
+                  )}
                 </div>
               </div>
               

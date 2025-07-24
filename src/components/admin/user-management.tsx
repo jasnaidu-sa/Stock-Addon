@@ -47,7 +47,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { getSupabaseClient } from '@/lib/supabase';;
+import { getSupabaseClient, supabaseAdmin } from '@/lib/supabase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,7 +89,7 @@ export function UserManagement() {
     email: '',
     name: '',
     password: '',
-    role: 'user',
+    role: 'customer',
     group: 'Franchisee',
     company_name: '',
   });
@@ -137,10 +137,15 @@ export function UserManagement() {
 
       console.log('Admin access granted.');
 
-      // Fetch all users with direct columns
-      const { data, error } = await supabase
+      // Fetch all users with admin client to bypass RLS
+      console.log('Fetching users with admin client...');
+      if (!supabaseAdmin) {
+        throw new Error('Admin client not available');
+      }
+      
+      const { data, error } = await supabaseAdmin
         .from('users')
-        .select('id, email, name, role, group_type, company_name, created_at, last_sign_in_at, status')
+        .select('id, email, name, role, group_type, company_name, created_at, last_sign_in_at, status, first_name, last_name, username')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -151,18 +156,25 @@ export function UserManagement() {
       console.log('Raw users data:', data);
 
       // Transform the data to match our interface, with null checks
-      const transformedUsers = (data || []).map(user => ({
-        id: user.id,
-        email: user.email || '',
-        name: user.name || '',
-        role: user.role || 'user',
-        group: (user.group_type || null) as 'Franchisee' | 'Regional' | null,
-        company_name: user.company_name || null,
-        created_at: user.created_at || new Date().toISOString(),
-        last_sign_in_at: user.last_sign_in_at || null,
-        status: (user.status || 'pending') as 'pending' | 'active' | 'disabled',
-        auth_user_id: user.id, // The user ID is the same as auth user ID
-      }));
+      const transformedUsers = (data || []).map(user => {
+        // Use first_name/last_name if available, otherwise fallback to name field
+        const displayName = user.first_name && user.last_name 
+          ? `${user.first_name} ${user.last_name}`.trim()
+          : user.name || user.username || 'Unknown';
+          
+        return {
+          id: user.id,
+          email: user.email || '',
+          name: displayName,
+          role: user.role || 'customer',
+          group: (user.group_type || null) as 'Franchisee' | 'Regional' | null,
+          company_name: user.company_name || null,
+          created_at: user.created_at || new Date().toISOString(),
+          last_sign_in_at: user.last_sign_in_at || null,
+          status: (user.status || 'pending') as 'pending' | 'active' | 'disabled',
+          auth_user_id: user.id, // The user ID is the same as auth user ID
+        };
+      });
 
       console.log('Transformed users:', transformedUsers);
       setUsers(transformedUsers);
@@ -272,7 +284,7 @@ export function UserManagement() {
         email: '',
         name: '',
         password: '',
-        role: 'user',
+        role: 'customer',
         group: 'Franchisee',
         company_name: '',
       });
@@ -441,8 +453,9 @@ export function UserManagement() {
   };
 
   const handleRoleChange = async (userId: string, newRole: string) => {
-    // Ensure the target role is valid ('admin' or 'user')
-    if (!['admin', 'user'].includes(newRole)) {
+    // Ensure the target role is valid (all hierarchy roles)
+    const validRoles = ['admin', 'customer', 'regional_manager', 'area_manager', 'store_manager'];
+    if (!validRoles.includes(newRole)) {
       toast({ title: 'Error', description: 'Invalid role selected.', variant: 'destructive' });
       return;
     }
@@ -497,6 +510,17 @@ export function UserManagement() {
       user.group?.toLowerCase().includes(query)
     );
   });
+
+  const formatRoleName = (role: string) => {
+    const roleMap: { [key: string]: string } = {
+      'customer': 'Customer',
+      'store_manager': 'Store Manager',
+      'area_manager': 'Area Manager',
+      'regional_manager': 'Regional Manager',
+      'admin': 'Admin'
+    };
+    return roleMap[role] || role;
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -616,7 +640,10 @@ export function UserManagement() {
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="customer">Customer</SelectItem>
+                      <SelectItem value="store_manager">Store Manager</SelectItem>
+                      <SelectItem value="area_manager">Area Manager</SelectItem>
+                      <SelectItem value="regional_manager">Regional Manager</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                     </SelectContent>
                   </Select>
@@ -679,11 +706,14 @@ export function UserManagement() {
                       value={user.role}
                       onValueChange={(newRole) => handleRoleChange(user.id, newRole)}
                     >
-                      <SelectTrigger className="w-[100px]">
+                      <SelectTrigger className="w-[140px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="customer">Customer</SelectItem>
+                        <SelectItem value="store_manager">Store Manager</SelectItem>
+                        <SelectItem value="area_manager">Area Manager</SelectItem>
+                        <SelectItem value="regional_manager">Regional Manager</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>

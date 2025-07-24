@@ -14,14 +14,9 @@ function getEnvValue(key: string): string {
   const importMetaValue = import.meta.env[key];
   const windowEnvValue = window.ENV && window.ENV[key];
   
-  // Define fallbacks for critical values
-  const fallbacks: Record<string, string> = {
-    'VITE_SUPABASE_URL': 'https://cfjvskafvcljvxnawccs.supabase.co',
-    'VITE_SUPABASE_ANON_KEY': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmanZza2FmdmNsanZ4bmF3Y2NzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2MzczODQsImV4cCI6MjA1NjIxMzM4NH0.0kEvw4fWwp0Qw2fSXtmvcstZK3pYhS2yXiS0h68DEx0'
-  };
-  
   // Return the first non-empty value from our sources
-  return importMetaValue || windowEnvValue || fallbacks[key] || '';
+  // No fallbacks for security - environment variables must be properly configured
+  return importMetaValue || windowEnvValue || '';
 }
 
 const supabaseUrl = getEnvValue('VITE_SUPABASE_URL');
@@ -418,6 +413,7 @@ export interface CartItem {
   base_qty?: number; // Retaining for now, might be legacy or for a different purpose
   product_type?: ProductCategory; // Added: e.g., 'mattress', 'base'
   base?: Base; // Added: Optional, for mattresses that include a base
+  mattress_id?: string; // Added: Optional, to link a base to its mattress
 }
 
 export type Product = {

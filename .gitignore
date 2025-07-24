@@ -26,3 +26,68 @@ vite.config.*.local.js
 *.sw?
 
 .vercel
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+*.env
+
+# Security - Sensitive files
+*secret*
+*password*
+*credentials*
+*private*
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Admin and debug scripts
+create-admin*.js
+*-admin*.js
+debug-*.js
+test-*.js
+fix-*.js
+*-test.html
+*-debug.html
+
+# Backup and temporary files
+*.bak
+*.backup
+*.tmp
+*.temp
+*~
+.#*
+*.swp
+*.swo
+
+# Windows artifacts
+*:Zone.Identifier
+Thumbs.db
+ehthumbs.db
+
+# Database dumps and backups
+*.sql.backup
+*.dump
+*.sqlite
+*.db
+
+# Logs and debug files
+*.log.*
+debug.log
+error.log
+access.log
+
+# Build artifacts
+dist/
+build/
+out/
+.output/
+
+# Package manager files
+package-lock.json.backup
+yarn.lock.backup
+pnpm-lock.yaml.backup

@@ -20,6 +20,7 @@ const LEGACY_CODE_PATTERNS = [
  * Call this on app initialization
  */
 export function initCacheBuster() {
+  
   // Add cache-control meta tags
   const cacheControlMeta = document.createElement('meta');
   cacheControlMeta.httpEquiv = 'Cache-Control';

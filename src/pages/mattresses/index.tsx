@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSupabaseClient } from '@/lib/supabase';;
+import { getSupabaseClient } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/components/cart/cart-provider';
 import { Button } from '@/components/ui/button';
@@ -19,8 +19,7 @@ import { Label } from '@/components/ui/label';
 import type { Product } from '@/types/product';
 
 export default function MattressPage() {
-  
-    const supabase = getSupabaseClient();
+  const supabase = getSupabaseClient();
   const [mattresses, setMattresses] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
@@ -44,70 +43,22 @@ export default function MattressPage() {
       return;
     }
     try {
-      // Try a different approach without quoted table names
-      console.log('Fetching mattresses...');
-      
-      // Use the table name directly without quotes  
       const { data, error } = await supabase
         .from('mattress')
         .select('*')
-        .order('mattress_code')
-        .throwOnError(); // Added to throw error immediately if any
-          
+        .order('mattress_code');
+
       if (error) {
-        console.error('Error fetching mattresses:', error);
         throw error;
       }
-      
-      console.log('Mattresses loaded successfully:', data?.length || 0);
-      
-      // If we need base data, fetch it separately
-      let mattressesWithBases = [...(data || [])]; 
-      
-      // Get unique base codes from mattresses
-      const baseCodes = [...new Set(data?.map((m: any) => m.base_code).filter(Boolean) || [])];
-      
-      if (baseCodes.length > 0) {
-        console.log('Fetching bases for codes:', baseCodes);
-        try {
-          // Use the base table directly
-          const { data: baseData, error: baseError } = await supabase
-            .from('base')
-            .select('id, code, description, price')
-            .in('code', baseCodes)
-            .throwOnError(); // Added to throw error immediately if any
-            
-          if (baseError) throw baseError;
-          
-          console.log('Bases loaded successfully:', baseData?.length || 0);
-          
-          // Add base details to each mattress
-          mattressesWithBases = mattressesWithBases.map(mattress => {
-            const baseInfo = baseData.find((b: any) => b.code === mattress.base_code);
-            return {
-              ...mattress,
-              base: baseInfo ? {
-                id: baseInfo.id, // Ensure the base's own ID is stored
-                code: baseInfo.code,
-                description: baseInfo.description,
-                price: baseInfo.price,
-              } : null
-            };
-          });
-        }
-        catch (baseError) {
-          console.error('Error fetching bases:', baseError);
-        }
-      }
-      
-      setMattresses(mattressesWithBases);
-      
-      // Initialize quantities and includeBase states
+
+      setMattresses(data || []);
+
       const initialQuantities: Record<string, number> = {};
       const initialIncludeBase: Record<string, boolean> = {};
-      mattressesWithBases.forEach((product) => {
+      (data || []).forEach((product) => {
         initialQuantities[product.id] = 1;
-        initialIncludeBase[product.id] = true;
+        initialIncludeBase[product.id] = true; // Default to true for all
       });
       setQuantities(initialQuantities);
       setIncludeBase(initialIncludeBase);
@@ -115,7 +66,7 @@ export default function MattressPage() {
       console.error('Failed to load mattresses:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load mattresses. Please try again.',
+        description: 'Could not load mattresses.',
         variant: 'destructive',
       });
     } finally {
@@ -131,39 +82,65 @@ export default function MattressPage() {
   };
 
   const addToCart = async (product: Product) => {
+    if (!supabase) return;
     setAddingToCart(product.id);
     try {
       const quantity = quantities[product.id] || 1;
       const shouldIncludeBase = includeBase[product.id];
-      const price = includeBase[product.id] ? Number(product.set_price || 0) : Number(product.mattress_price || 0);
-      const name = product.description;
-      const code = product.mattress_code || '';
 
-      const cartItem = {
-        id: shouldIncludeBase ? `${product.id}_set` : product.id, // Ensure unique ID if base is included vs not
-        quantity,
-        price, // This is the price for the mattress, or mattress + base if 'set_price' is used
-        name,
-        code: code || product.id, // Fallback to product.id if mattress_code is missing
-        category: 'mattress' as const, // Explicitly 'mattress' for items from this page. Consider if product_type makes this redundant.
-        product_type: 'mattress' as const, // Set product_type based on the source (mattresses page)
-        base: shouldIncludeBase && product.base ? product.base : undefined, // Include the base object if selected and available
-      };
-
+      // Add mattress to cart first
       dispatch({
         type: 'ADD_ITEM',
-        payload: cartItem,
+        payload: {
+          id: product.id,
+          quantity,
+          price: product.mattress_price ?? 0,
+          name: product.description,
+          code: product.mattress_code || product.id,
+          category: 'mattress',
+          product_type: 'mattress',
+        },
       });
 
+      // If base is included, find it and add it as a separate item
+      if (shouldIncludeBase && product.base_code) {
+        const { data: baseProduct, error: baseError } = await supabase
+          .from('base')
+          .select('*')
+          .eq('code', product.base_code)
+          .single();
+
+        if (baseError) {
+          throw new Error(
+            `Could not find base for ${product.description}: ${baseError.message}`
+          );
+        }
+
+        if (baseProduct) {
+          dispatch({
+            type: 'ADD_ITEM',
+            payload: {
+              id: `${product.id}_base`, // Synthetic ID for the base
+              quantity,
+              price: baseProduct.price ?? 0,
+              name: `Base for ${product.description}`,
+              code: baseProduct.code || baseProduct.id,
+              category: 'base',
+              product_type: 'base',
+              mattress_id: product.id, // Link to parent mattress
+            },
+          });
+        }
+      }
+
       toast({
-        title: 'Added to Cart',
-        description: `${name} ${shouldIncludeBase ? '(with base)' : ''} (×${quantity}) has been added to your cart`,
+        title: 'Added to cart',
+        description: `${product.description} has been added to your cart.`,
       });
     } catch (error) {
-      console.error('Failed to add to cart:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add item to cart',
+        description: (error as Error).message || 'There was a problem adding the item to the cart.',
         variant: 'destructive',
       });
     } finally {
@@ -173,14 +150,14 @@ export default function MattressPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="w-full space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Mattresses</h1>
       </div>
@@ -207,17 +184,14 @@ export default function MattressPage() {
                 <TableCell>{product.description}</TableCell>
                 <TableCell>{product.size}</TableCell>
                 <TableCell className="text-right">
-                  {formatCurrency(
-                    includeBase[product.id]
-                      ? Number(product.set_price || 0)
-                      : Number(product.mattress_price || 0)
-                  )}
+                  {formatCurrency(Number(product.mattress_price || 0))}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id={`include-base-${product.id}`}
                       checked={includeBase[product.id]}
+                      disabled={!product.base_code}
                       onCheckedChange={(checked) => {
                         setIncludeBase(prev => ({
                           ...prev,

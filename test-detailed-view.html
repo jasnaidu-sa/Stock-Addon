@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekly Plan Interface Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .status { padding: 5px 10px; border-radius: 3px; color: white; }
+        .success { background: #28a745; }
+        .error { background: #dc3545; }
+        .warning { background: #ffc107; color: black; }
+        pre { background: #e9ecef; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Weekly Plan Interface Debug Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li>Open the developer console (F12)</li>
+            <li>Navigate to <a href="http://localhost:5173/admin/amendment-management" target="_blank">Amendment Management</a></li>
+            <li>Wait for data to load (should see "Combined Data loaded" message)</li>
+            <li>Click the "DETAILED VIEW" button</li>
+            <li>Check console for debug logs starting with "🔍 [WeeklyPlanInterface]"</li>
+            <li>Look for line items displayed in the detailed view</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Expected Debug Log Pattern</h2>
+        <pre>
+🔍 [WeeklyPlanInterface] hasProcessedPreloadedData: true
+🔍 [WeeklyPlanInterface] isDataLoaded: true  
+🔍 [WeeklyPlanInterface] userHierarchy exists: true
+🔍 [WeeklyPlanInterface] currentWeek exists: true
+🔍 [WeeklyPlanInterface] storeHierarchy.length: [number > 0]
+🔍 [WeeklyPlanInterface] isInitialDataLoaded: false
+🔍 [WeeklyPlanInterface] Final condition result: true
+🚀 [WeeklyPlanInterface] All conditions met - calling loadCategoriesAndAmendments for initial load
+        </pre>
+    </div>
+
+    <div class="test-section">
+        <h2>What to Look For</h2>
+        <ul>
+            <li><strong>Data Loading:</strong> Should see "Combined Data loaded: 50036 items, 2 amendments"</li>
+            <li><strong>Category Processing:</strong> Should see categories being processed with totals</li>
+            <li><strong>Line Items:</strong> Should see actual product details in the detailed view</li>
+            <li><strong>Store Names:</strong> Should show actual store names, not "unknown store"</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>Troubleshooting</h2>
+        <p><strong>If Final condition result is false:</strong></p>
+        <ul>
+            <li>Check which individual condition is failing</li>
+            <li>Most likely: isInitialDataLoaded is still true</li>
+            <li>Look for the line where it gets reset to false</li>
+        </ul>
+        
+        <p><strong>If no debug logs appear:</strong></p>
+        <ul>
+            <li>Make sure the detailed view is clicked</li>
+            <li>Check that hasProcessedPreloadedData is being set to true</li>
+            <li>Verify data is actually loaded</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🧪 Test page loaded - navigate to amendment management and check debug logs');
+    </script>
+</body>
+</html>

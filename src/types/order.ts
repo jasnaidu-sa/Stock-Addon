@@ -26,9 +26,10 @@ export interface OrderItem {
   mattress_code?: string;  // TypeScript only - not stored in database
   code?: string;          // Code for furniture products
   history?: OrderItemHistoryRecord[];
+  is_deleted?: boolean;   // Flag to indicate this item was previously deleted
 }
 
-export type OrderStatus = 'pending' | 'approved' | 'completed' | 'cancelled' | 'review';
+export type OrderStatus = 'pending' | 'approved' | 'completed' | 'cancelled' | 'review' | 'shipped' | 'rejected';
 
 export interface Order {
   id: string;
@@ -49,4 +50,5 @@ export interface Order {
   email?: string | null;
   user_role?: string | null; // Aliased in the view as 'user_role'
   admin_notes?: string | null; // Notes added by admin, can be null
+  user?: { id: string; email?: string | null; name?: string | null; } | null; // Manually joined user data
 }

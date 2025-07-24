@@ -75,8 +75,8 @@ interface OrderReviewProps {
   onOrderUpdated?: () => void
 }
 
-export function OrderReview({ 
-  const supabase = getSupabaseClient(); // Initialize Supabase clientorder, onClose, onOrderUpdated }: OrderReviewProps) {
+export function OrderReview({ order, onClose, onOrderUpdated }: OrderReviewProps) {
+  const supabase = getSupabaseClient(); // Initialize Supabase client
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);

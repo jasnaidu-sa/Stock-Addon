@@ -10,7 +10,7 @@ import AdminUserManagementPage from '@/pages/admin/user-management';
 import { ExportPage } from '@/pages/admin/export'; // Import the new export page
 import { formatCurrency } from '@/lib/utils';
 // import { useNavigate } from 'react-router-dom'; // Commented out as not currently used
-import { LogOut, Download, UserPlus, UserCircle } from 'lucide-react';
+import { LogOut, Download, UserPlus, UserCircle, CheckCircle, XCircle, Clock, AlertTriangle, Edit3 } from 'lucide-react';
 import * as XLSX from 'xlsx'; // Import xlsx library
 import { useUser, useClerk } from '@clerk/clerk-react';
 import {
@@ -22,6 +22,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface DashboardStats {
   total: number;
@@ -30,6 +41,14 @@ interface DashboardStats {
   cancelled: number;
   totalQuantity: number;
   totalValue: number;
+}
+
+interface AmendmentStats {
+  totalPending: number;
+  storeManagerAmendments: number;
+  areaManagerAmendments: number;
+  regionalManagerAmendments: number;
+  rejectedAmendments: number;
 }
 
 interface User {
@@ -65,6 +84,20 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
     totalValue: 0,
   });
 
+  const [amendmentStats, setAmendmentStats] = useState<AmendmentStats>({
+    totalPending: 0,
+    storeManagerAmendments: 0,
+    areaManagerAmendments: 0,
+    regionalManagerAmendments: 0,
+    rejectedAmendments: 0,
+  });
+
+  const [pendingAmendments, setPendingAmendments] = useState<any[]>([]);
+  const [modifyDialogOpen, setModifyDialogOpen] = useState(false);
+  const [selectedAmendment, setSelectedAmendment] = useState<any>(null);
+  const [modifyQuantity, setModifyQuantity] = useState<number>(0);
+  const [modifyReason, setModifyReason] = useState<string>('');
+
   const { toast } = useToast();
   // useNavigate hook is available if needed
   const { isSignedIn, user } = useUser();
@@ -74,6 +107,7 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
     // Only load dashboard data when user is signed in (Clerk is initialized)
     if (isSignedIn) {
       loadDashboardViewData();
+      loadAmendmentData();
     }
   }, [isSignedIn]);
 
@@ -140,6 +174,190 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
       totalValue: ordersToCount.reduce((sum: number, order: any) => sum + (order.value || 0), 0),
     };
     setStats(newStats);
+  };
+
+  const loadAmendmentData = async () => {
+    try {
+      const supabaseClient = getSupabaseClient();
+      if (!supabaseClient) {
+        console.error('Supabase client not initialized');
+        return;
+      }
+
+      // Load amendments pending admin approval
+      const { data: amendmentsData, error: amendmentsError } = await supabaseClient
+        .from('weekly_plan_amendments')
+        .select(`
+          *,
+          users:user_id(id, email, name, role),
+          stores:store_name(store_name, area_manager, regional_manager)
+        `)
+        .in('status', ['area_manager_approved', 'regional_direct', 'area_direct', 'submitted'])
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (amendmentsError) {
+        console.error('Error loading amendments:', amendmentsError);
+        return;
+      }
+
+      // Calculate amendment statistics
+      const stats = {
+        totalPending: amendmentsData?.length || 0,
+        storeManagerAmendments: amendmentsData?.filter(a => a.users?.role === 'store_manager').length || 0,
+        areaManagerAmendments: amendmentsData?.filter(a => a.users?.role === 'area_manager').length || 0,
+        regionalManagerAmendments: amendmentsData?.filter(a => a.users?.role === 'regional_manager').length || 0,
+        rejectedAmendments: 0, // Will be calculated when we add rejection tracking
+      };
+
+      setAmendmentStats(stats);
+      setPendingAmendments(amendmentsData || []);
+
+    } catch (error) {
+      console.error('Error loading amendment data:', error);
+    }
+  };
+
+  const handleQuickApproval = async (amendmentId: string, action: 'approve' | 'reject', reason?: string) => {
+    try {
+      const supabaseClient = getSupabaseClient();
+      if (!supabaseClient) {
+        toast({ title: 'Error', description: 'Database connection not available', variant: 'destructive' });
+        return;
+      }
+
+      const updateData = {
+        status: action === 'approve' ? 'admin_approved' : 'admin_rejected',
+        admin_notes: reason || '',
+        admin_approved_at: action === 'approve' ? new Date().toISOString() : null,
+        admin_rejected_at: action === 'reject' ? new Date().toISOString() : null,
+        admin_approved_by: user?.id || '',
+      };
+
+      const { error } = await supabaseClient
+        .from('weekly_plan_amendments')
+        .update(updateData)
+        .eq('id', amendmentId);
+
+      if (error) {
+        console.error('Error updating amendment:', error);
+        toast({ title: 'Error', description: 'Failed to update amendment', variant: 'destructive' });
+        return;
+      }
+
+      toast({ 
+        title: 'Success', 
+        description: `Amendment ${action === 'approve' ? 'approved' : 'rejected'} successfully`,
+      });
+
+      // Reload amendment data
+      loadAmendmentData();
+
+    } catch (error) {
+      console.error('Error in quick approval:', error);
+      toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
+    }
+  };
+
+  const handleAmendmentModification = async (
+    originalAmendmentId: string, 
+    modifiedQuantity: number, 
+    modificationReason: string
+  ) => {
+    try {
+      const supabaseClient = getSupabaseClient();
+      if (!supabaseClient) {
+        toast({ title: 'Error', description: 'Database connection not available', variant: 'destructive' });
+        return;
+      }
+
+      // First, get the original amendment data
+      const { data: originalAmendment, error: fetchError } = await supabaseClient
+        .from('weekly_plan_amendments')
+        .select('*')
+        .eq('id', originalAmendmentId)
+        .single();
+
+      if (fetchError || !originalAmendment) {
+        console.error('Error fetching original amendment:', fetchError);
+        toast({ title: 'Error', description: 'Could not retrieve original amendment', variant: 'destructive' });
+        return;
+      }
+
+      // Mark original amendment as admin_modified
+      const { error: updateError } = await supabaseClient
+        .from('weekly_plan_amendments')
+        .update({
+          status: 'admin_modified',
+          admin_notes: `Modified by admin. Original quantity: ${originalAmendment.quantity}, Modified to: ${modifiedQuantity}. Reason: ${modificationReason}`,
+          admin_approved_at: new Date().toISOString(),
+          admin_approved_by: user?.id || '',
+        })
+        .eq('id', originalAmendmentId);
+
+      if (updateError) {
+        console.error('Error updating original amendment:', updateError);
+        toast({ title: 'Error', description: 'Failed to update original amendment', variant: 'destructive' });
+        return;
+      }
+
+      // Create new "admin_amended" record
+      const { error: insertError } = await supabaseClient
+        .from('weekly_plan_amendments')
+        .insert({
+          user_id: user?.id || '',
+          store_name: originalAmendment.store_name,
+          week_reference: originalAmendment.week_reference,
+          product_name: originalAmendment.product_name,
+          category: originalAmendment.category,
+          quantity: modifiedQuantity,
+          amendment_type: 'admin_amended',
+          justification: `Admin modification of amendment ${originalAmendmentId}. ${modificationReason}`,
+          status: 'admin_approved',
+          admin_approved_at: new Date().toISOString(),
+          admin_approved_by: user?.id || '',
+          original_amendment_id: originalAmendmentId,
+          admin_notes: `Admin modified from ${originalAmendment.quantity} to ${modifiedQuantity}`,
+        });
+
+      if (insertError) {
+        console.error('Error creating admin amended record:', insertError);
+        toast({ title: 'Error', description: 'Failed to create admin amendment record', variant: 'destructive' });
+        return;
+      }
+
+      toast({ 
+        title: 'Success', 
+        description: `Amendment modified and approved. Quantity changed from ${originalAmendment.quantity} to ${modifiedQuantity}`,
+      });
+
+      // Reload amendment data
+      loadAmendmentData();
+
+    } catch (error) {
+      console.error('Error in amendment modification:', error);
+      toast({ title: 'Error', description: 'An unexpected error occurred', variant: 'destructive' });
+    }
+  };
+
+  const openModifyDialog = (amendment: any) => {
+    setSelectedAmendment(amendment);
+    setModifyQuantity(amendment.quantity);
+    setModifyReason('');
+    setModifyDialogOpen(true);
+  };
+
+  const handleModifySubmit = async () => {
+    if (!selectedAmendment || !modifyReason.trim()) {
+      toast({ title: 'Error', description: 'Please provide a reason for modification', variant: 'destructive' });
+      return;
+    }
+
+    await handleAmendmentModification(selectedAmendment.id, modifyQuantity, modifyReason);
+    setModifyDialogOpen(false);
+    setSelectedAmendment(null);
+    setModifyQuantity(0);
+    setModifyReason('');
   };
 
   const handleExportToExcel = async () => {
@@ -225,14 +443,13 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
   }, [orders, filterValue, showCompletedAdminOrders]);
 
   return (
-    <div className="container mx-auto py-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h2>
       </div>
       
       {/* Enhanced Navigation Bar with User Profile - fixed size container */}
-      <div className="bg-card border shadow-sm rounded-lg p-3 mb-6 w-full">
+      <div className="bg-card border shadow-sm rounded-lg p-3 w-full">
         <div className="flex items-center justify-between flex-nowrap">
           <nav className="flex items-center space-x-2 overflow-x-auto flex-shrink-0">
             <Button
@@ -304,52 +521,179 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
 
       {activeSection === 'dashboard' && (
         <>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
               </CardHeader>
-              <CardContent><div className="text-2xl font-bold">{stats.total}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold mt-2">{stats.total}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pending</CardTitle>
               </CardHeader>
-              <CardContent><div className="text-2xl font-bold">{stats.pending}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold mt-2">{stats.pending}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Completed</CardTitle>
               </CardHeader>
-              <CardContent><div className="text-2xl font-bold">{stats.completed}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold mt-2">{stats.completed}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
               </CardHeader>
-              <CardContent><div className="text-2xl font-bold">{stats.cancelled}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold mt-2">{stats.cancelled}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
               </CardHeader>
-              <CardContent><div className="text-2xl font-bold">{stats.totalQuantity}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold mt-2">{stats.totalQuantity}</div></CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Value</CardTitle>
               </CardHeader>
-              <CardContent><div className="text-2xl font-bold">{formatCurrency(stats.totalValue)}</div></CardContent>
+              <CardContent><div className="text-2xl font-bold mt-2">{formatCurrency(stats.totalValue)}</div></CardContent>
             </Card>
           </div>
 
-          <Card className="mb-6">
-            <CardContent className="flex items-center justify-between gap-4 pt-6">
+          {/* Amendment Approval Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pending Approvals</h3>
+            
+            {/* Amendment Stats Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card className="border-orange-200 bg-orange-50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-orange-800">Total Pending</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-orange-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-900">{amendmentStats.totalPending}</div>
+                  <p className="text-xs text-orange-600 mt-1">Awaiting admin approval</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-800">Regional Manager</CardTitle>
+                  <Clock className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-900">{amendmentStats.regionalManagerAmendments}</div>
+                  <p className="text-xs text-blue-600 mt-1">Direct amendments</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-green-200 bg-green-50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-green-800">Area Manager</CardTitle>
+                  <Clock className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-900">{amendmentStats.areaManagerAmendments}</div>
+                  <p className="text-xs text-green-600 mt-1">Direct amendments</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-purple-200 bg-purple-50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-purple-800">Store Manager</CardTitle>
+                  <Clock className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-900">{amendmentStats.storeManagerAmendments}</div>
+                  <p className="text-xs text-purple-600 mt-1">Via area manager</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Amendments List */}
+            {pendingAmendments.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Recent Pending Amendments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {pendingAmendments.slice(0, 5).map((amendment) => (
+                    <div key={amendment.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{amendment.stores?.store_name}</span>
+                          <span className="text-sm text-gray-500">•</span>
+                          <span className="text-sm text-gray-600">{amendment.product_name}</span>
+                        </div>
+                        <div className="text-sm text-gray-500 mt-1">
+                          {amendment.amendment_type} • Qty: {amendment.quantity} • 
+                          By: {amendment.users?.name || amendment.users?.email}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                          onClick={() => openModifyDialog(amendment)}
+                        >
+                          <Edit3 className="h-4 w-4 mr-1" />
+                          Modify
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-green-600 border-green-300 hover:bg-green-50"
+                          onClick={() => handleQuickApproval(amendment.id, 'approve')}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                          onClick={() => handleQuickApproval(amendment.id, 'reject', 'Rejected from dashboard')}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {pendingAmendments.length > 5 && (
+                    <div className="text-center pt-2">
+                      <Button 
+                        variant="link" 
+                        onClick={() => window.open('/admin/amendment-management', '_blank')}
+                      >
+                        View all {amendmentStats.totalPending} pending amendments →
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {pendingAmendments.length === 0 && (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">All caught up!</h4>
+                  <p className="text-gray-500">No amendments pending your approval at this time.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <Card>
+            <CardContent className="flex items-center justify-between gap-4 py-6">
                 <Input
                     placeholder="Search Orders (Order#, Customer, Store, Status)..."
                     value={filterValue}
                     onChange={(e) => setFilterValue(e.target.value)}
-                    className="max-w-sm"
+                    className="w-72"
                 />
                 <div className="flex gap-2">
                   <Button
@@ -372,7 +716,7 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
             </CardContent>
           </Card>
 
-          <AdminOrderTable orders={filteredDashboardOrders} loading={loading} reloadOrders={loadDashboardViewData} />
+          <AdminOrderTable initialOrders={filteredDashboardOrders} reloadOrders={loadDashboardViewData} />
         </>
       )}
 
@@ -383,6 +727,66 @@ export function DashboardPage({ initialSection = 'dashboard' }: DashboardPagePro
       {activeSection === 'export' && (
         <ExportPage />
       )}
+
+      {/* Amendment Modification Dialog */}
+      <Dialog open={modifyDialogOpen} onOpenChange={setModifyDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modify Amendment</DialogTitle>
+            <DialogDescription>
+              Make changes to the amendment before approval. This will create a new "amended by admin" record.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAmendment && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm font-medium">{selectedAmendment.stores?.store_name}</div>
+                <div className="text-sm text-gray-600">{selectedAmendment.product_name}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Original Type: {selectedAmendment.amendment_type} • 
+                  Requested by: {selectedAmendment.users?.name || selectedAmendment.users?.email}
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="modify-quantity">Modified Quantity</Label>
+                <Input
+                  id="modify-quantity"
+                  type="number"
+                  value={modifyQuantity}
+                  onChange={(e) => setModifyQuantity(Number(e.target.value))}
+                  className="mt-1"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  Original quantity: {selectedAmendment.quantity}
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="modify-reason">Modification Reason</Label>
+                <Textarea
+                  id="modify-reason"
+                  value={modifyReason}
+                  onChange={(e) => setModifyReason(e.target.value)}
+                  placeholder="Explain why you're modifying this amendment..."
+                  className="mt-1"
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModifyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleModifySubmit}>
+              Modify & Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Removed unused sections */}
     </div>

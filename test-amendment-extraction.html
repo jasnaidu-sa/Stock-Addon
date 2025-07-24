@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amendment Extraction Debug Test</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        .header h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .test-card { 
+            background: #f8f9fc; 
+            padding: 25px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            border-left: 5px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .debug-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-left: 5px solid #fff;
+        }
+        .step { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            border-left: 4px solid #fff;
+        }
+        .debug-log { 
+            background: #1a202c; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            border: 1px solid #2d3748;
+        }
+        .highlight {
+            background: #ffd700;
+            color: #333;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .link-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .expected { 
+            color: #38a169; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Amendment Extraction - Debug Test</h1>
+            <p>Testing Enhanced Amendment Detection Logic</p>
+        </div>
+        
+        <div class="test-card debug-card">
+            <h2>🎯 Amendment Detection Enhancements</h2>
+            <p><strong>Problem Solved:</strong> 11 amendments loaded in submission-tracking.tsx but not displayed in WeeklyPlanInterface</p>
+            
+            <h3>✅ New Detection Methods Added:</h3>
+            <ul>
+                <li><strong>Method 1:</strong> Separate amendments array in preloadedData.amendments</li>
+                <li><strong>Method 2:</strong> Items with has_amendment === true flag</li>
+                <li><strong>Method 3:</strong> Items with amendment status (pending/submitted/approved/rejected)</li>
+                <li><strong>Method 4:</strong> Items with amended_qty field</li>
+                <li><strong>Method 5:</strong> Items with justification field</li>
+                <li><strong>Method 6:</strong> Post-load amendment extraction (new fallback)</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>🧪 Testing Instructions</h2>
+            <div class="step">
+                <strong>Step 1:</strong> Open Developer Tools (F12) → Console tab
+            </div>
+            <div class="step">
+                <strong>Step 2:</strong> Navigate to Amendment Management
+                <br><a href="http://localhost:5173/admin/amendment-management" target="_blank" class="link-button">📋 Open Amendment Management</a>
+            </div>
+            <div class="step">
+                <strong>Step 3:</strong> Wait for data load and look for amendment detection logs
+            </div>
+            <div class="step">
+                <strong>Step 4:</strong> Click <strong>"DETAILED VIEW"</strong> button
+            </div>
+            <div class="step">
+                <strong>Step 5:</strong> Verify amendments are now visible in line items
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🔍 Expected Debug Logs</h2>
+            <div class="debug-log">
+<span class="highlight">📋 [processPreloadedData] Preloaded data structure:</span><br>
+{<br>
+  storesWithSubmissions: 50036,<br>
+  stores: 85,<br>
+  amendments: X, // Should show number if separate array exists<br>
+  hasStoresWithSubmissions: true,<br>
+  hasStores: true,<br>
+  hasAmendments: boolean<br>
+}<br><br>
+
+<span class="highlight">📋 [processPreloadedData] Found separate amendments array: X</span> (if exists)<br>
+<span class="highlight">📋 [processPreloadedData] Sample separate amendments: [...]</span><br><br>
+
+OR<br><br>
+
+<span class="highlight">📋 [processPreloadedData] No amendments found with has_amendment flag. Checking for alternative indicators...</span><br>
+<span class="highlight">📋 [processPreloadedData] Items with amended_qty: X</span><br>
+<span class="highlight">📋 [processPreloadedData] Items with amendment status: X</span><br>
+<span class="highlight">📋 [processPreloadedData] Items with justification: X</span><br>
+<span class="highlight">📋 [processPreloadedData] Using X items with status as amendments</span><br><br>
+
+OR (Fallback method)<br><br>
+
+<span class="highlight">🔍 [WeeklyPlanInterface] Data loaded but no amendments found, attempting amendment extraction...</span><br>
+<span class="highlight">📋 [WeeklyPlanInterface] Found X items with amendment status</span>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>✅ What Should Happen</h2>
+            <ul>
+                <li><span class="expected">✓</span> Console shows amendment detection process</li>
+                <li><span class="expected">✓</span> At least one detection method finds amendments</li>
+                <li><span class="expected">✓</span> Number matches "11 amendments" from submission-tracking.tsx</li>
+                <li><span class="expected">✓</span> Line items display with amendment indicators</li>
+                <li><span class="expected">✓</span> Amendment status badges visible</li>
+                <li><span class="expected">✓</span> No performance issues (no constant re-rendering)</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>🔧 Technical Implementation</h2>
+            <h3>🎯 Multi-layered Amendment Detection:</h3>
+            <ol>
+                <li><strong>Priority 1:</strong> Check preloadedData.amendments (separate array)</li>
+                <li><strong>Priority 2:</strong> Extract from storesWithSubmissions using has_amendment flag</li>
+                <li><strong>Priority 3:</strong> Filter by amendment status in storesWithSubmissions</li>
+                <li><strong>Priority 4:</strong> Post-load fallback extraction</li>
+            </ol>
+            
+            <h3>🚫 Performance Optimization:</h3>
+            <ul>
+                <li>Removed loadCategoriesAndAmendments from useEffect dependencies</li>
+                <li>Added strategic amendment extraction without triggering re-renders</li>
+                <li>Used pendingAmendments.length as dependency to prevent loops</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>🚨 Troubleshooting</h2>
+            <div style="background: #fff5f5; padding: 15px; border-radius: 8px; border: 2px solid #fc8181; margin: 10px 0;">
+                <p><strong>If amendments still not showing:</strong></p>
+                <ol>
+                    <li>Check which detection method is being attempted in console</li>
+                    <li>Look for the amendment count in each detection method</li>
+                    <li>Verify that the 11 amendments from submission-tracking have the right data structure</li>
+                    <li>Check if amendments have status field with values: pending/submitted/approved/rejected</li>
+                </ol>
+            </div>
+            
+            <div style="background: #f0fff4; padding: 15px; border-radius: 8px; border: 2px solid #68d391; margin: 10px 0;">
+                <p><strong>If performance issues persist:</strong></p>
+                <ol>
+                    <li>Check console for repeated logs (should not happen with current fix)</li>
+                    <li>Monitor for constant re-rendering of WeeklyPlanInterface component</li>
+                    <li>Verify useEffect dependencies are stable</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>📊 Success Criteria</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="background: #e6fffa; padding: 15px; border-radius: 8px;">
+                    <h4>✅ Amendment Display</h4>
+                    <ul>
+                        <li>At least 11 amendments detected</li>
+                        <li>Amendments visible in detailed view</li>
+                        <li>Amendment status badges shown</li>
+                        <li>Store names and quantities correct</li>
+                    </ul>
+                </div>
+                <div style="background: #e6f3ff; padding: 15px; border-radius: 8px;">
+                    <h4>✅ Performance</h4>
+                    <ul>
+                        <li>No continuous re-rendering</li>
+                        <li>Fast initial load</li>
+                        <li>Smooth tab navigation</li>
+                        <li>Stable memory usage</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('🧪 Amendment extraction debug test page loaded');
+        console.log('🎯 Enhanced amendment detection methods now active');
+        console.log('📋 Testing 6 different amendment detection strategies');
+        
+        // Track amendment detection success
+        let amendmentDetectionLogs = [];
+        const originalLog = console.log;
+        console.log = function(...args) {
+            const message = args.join(' ');
+            if (message.includes('📋') && message.includes('amendment')) {
+                amendmentDetectionLogs.push(message);
+                if (amendmentDetectionLogs.length > 5) {
+                    console.info('✅ Amendment detection logs captured:', amendmentDetectionLogs.length);
+                }
+            }
+            return originalLog.apply(console, args);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dedicated Amendment Extraction Test</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        .header h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .test-card { 
+            background: #f8f9fc; 
+            padding: 25px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            border-left: 5px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .solution-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-left: 5px solid #fff;
+        }
+        .step { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            border-left: 4px solid #fff;
+        }
+        .debug-log { 
+            background: #1a202c; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            border: 1px solid #2d3748;
+        }
+        .highlight {
+            background: #ffd700;
+            color: #333;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .link-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .expected { 
+            color: #38a169; 
+            font-weight: bold; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Dedicated Amendment Extraction</h1>
+            <p>Independent useEffect for Amendment Detection</p>
+        </div>
+        
+        <div class="test-card solution-card">
+            <h2>💡 Solution Implemented</h2>
+            <p><strong>Problem:</strong> Original amendment extraction logic was blocked by main data loading conditions</p>
+            <p><strong>Solution:</strong> Added dedicated useEffect that runs independently for amendment extraction only</p>
+            
+            <h3>🔄 How It Works:</h3>
+            <ul>
+                <li><strong>Independent Trigger:</strong> Runs separately from main data loading logic</li>
+                <li><strong>Smart Conditions:</strong> Only when preloadedData exists, no amendments found, and data is loaded</li>
+                <li><strong>Multi-Method Detection:</strong> 3 different amendment detection strategies</li>
+                <li><strong>Performance Safe:</strong> Minimal dependencies to prevent re-render loops</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>🧪 Testing Instructions</h2>
+            <div class="step">
+                <strong>Step 1:</strong> Open Developer Tools (F12) → Console tab
+            </div>
+            <div class="step">
+                <strong>Step 2:</strong> Clear console for clean testing (Ctrl+L)
+            </div>
+            <div class="step">
+                <strong>Step 3:</strong> Navigate to Amendment Management
+                <br><a href="http://localhost:5173/admin/amendment-management" target="_blank" class="link-button">📋 Open Amendment Management</a>
+            </div>
+            <div class="step">
+                <strong>Step 4:</strong> Look for dedicated amendment extraction logs
+            </div>
+            <div class="step">
+                <strong>Step 5:</strong> Click <strong>"DETAILED VIEW"</strong> and verify amendments appear
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🔍 Expected Console Output</h2>
+            <h3>✅ New Logs to Look For:</h3>
+            <div class="debug-log">
+<span class="highlight">🔍 [AmendmentExtraction] Dedicated amendment extraction useEffect triggered</span><br>
+<span class="highlight">🔍 [AmendmentExtraction] Attempting dedicated amendment extraction...</span><br><br>
+
+<strong>Then one of these methods should succeed:</strong><br><br>
+
+<span class="highlight">📋 [AmendmentExtraction] Found separate amendments array: X</span><br>
+OR<br>
+<span class="highlight">📋 [AmendmentExtraction] Found X items with amendment status</span><br>
+<span class="highlight">📋 [AmendmentExtraction] Sample items: [...]</span><br>
+OR<br>
+<span class="highlight">📋 [AmendmentExtraction] Found X items with amendment flag</span><br>
+OR<br>
+<span class="highlight">📋 [AmendmentExtraction] Found X items with amended_qty</span><br><br>
+
+<strong>Should NOT see:</strong><br>
+<span style="color: #fc8181;">📋 [AmendmentExtraction] No amendments found using any method</span>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>📊 Three Detection Methods</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div style="background: #e6fffa; padding: 15px; border-radius: 8px;">
+                    <h4>Method 1: Status-Based</h4>
+                    <p>Filters items with amendment status: pending, submitted, approved, rejected</p>
+                    <code>item.status && ['pending', 'submitted', 'approved', 'rejected'].includes(item.status)</code>
+                </div>
+                <div style="background: #e6f3ff; padding: 15px; border-radius: 8px;">
+                    <h4>Method 2: Flag-Based</h4>
+                    <p>Looks for items with has_amendment flag and amendment_data</p>
+                    <code>item.has_amendment === true && item.amendment_data</code>
+                </div>
+                <div style="background: #fff5e6; padding: 15px; border-radius: 8px;">
+                    <h4>Method 3: Quantity-Based</h4>
+                    <p>Detects items with amended_qty field</p>
+                    <code>item.amended_qty !== null && item.amended_qty !== undefined</code>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🎯 Success Criteria</h2>
+            <ul>
+                <li><span class="expected">✓</span> See "AmendmentExtraction" logs in console</li>
+                <li><span class="expected">✓</span> At least one detection method succeeds</li>
+                <li><span class="expected">✓</span> Number of detected amendments matches the 11 from submission-tracking</li>
+                <li><span class="expected">✓</span> Amendments appear in detailed view UI</li>
+                <li><span class="expected">✓</span> Amendment status badges visible</li>
+                <li><span class="expected">✓</span> No performance degradation</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>🚨 Troubleshooting</h2>
+            <div style="background: #fff5f5; padding: 15px; border-radius: 8px; border: 2px solid #fc8181; margin: 10px 0;">
+                <h4>If no AmendmentExtraction logs appear:</h4>
+                <ol>
+                    <li>Check that preloadedData exists</li>
+                    <li>Verify pendingAmendments.length is 0</li>
+                    <li>Ensure isDataLoaded is true</li>
+                    <li>Look for the useEffect trigger conditions</li>
+                </ol>
+            </div>
+            
+            <div style="background: #f0fff4; padding: 15px; border-radius: 8px; border: 2px solid #68d391; margin: 10px 0;">
+                <h4>If logs appear but no amendments found:</h4>
+                <ol>
+                    <li>Check the data structure of storesWithSubmissions</li>
+                    <li>Verify that the 11 amendments have the expected fields</li>
+                    <li>Look at the sample items logged to see their structure</li>
+                    <li>Consider that amendments might be in a different format</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>⚡ Technical Advantages</h2>
+            <ul>
+                <li><strong>Independence:</strong> Runs separately from main data loading logic</li>
+                <li><strong>Reliability:</strong> Not blocked by isInitialDataLoaded conditions</li>
+                <li><strong>Performance:</strong> Minimal dependencies to prevent infinite loops</li>
+                <li><strong>Fallback Safety:</strong> Multiple detection methods ensure success</li>
+                <li><strong>Clear Debugging:</strong> Dedicated logging namespace for easy tracking</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        console.log('🧪 Dedicated amendment extraction test page loaded');
+        console.log('🎯 Looking for AmendmentExtraction logs...');
+        
+        // Track amendment extraction attempts
+        let amendmentExtractionAttempts = 0;
+        let amendmentExtractionSuccess = false;
+        
+        const originalLog = console.log;
+        console.log = function(...args) {
+            const message = args.join(' ');
+            
+            if (message.includes('[AmendmentExtraction]')) {
+                amendmentExtractionAttempts++;
+                
+                if (message.includes('Found') && !message.includes('No amendments found')) {
+                    amendmentExtractionSuccess = true;
+                    console.info('✅ Amendment extraction succeeded!', message);
+                }
+                
+                if (amendmentExtractionAttempts > 3 && !amendmentExtractionSuccess) {
+                    console.warn('⚠️ Multiple amendment extraction attempts without success');
+                }
+            }
+            
+            return originalLog.apply(console, args);
+        };
+        
+        // Report status after 10 seconds
+        setTimeout(() => {
+            if (amendmentExtractionSuccess) {
+                console.info('🎉 Amendment extraction test: SUCCESSFUL');
+            } else if (amendmentExtractionAttempts > 0) {
+                console.warn('⚠️ Amendment extraction test: ATTEMPTED but no success');
+            } else {
+                console.warn('⚠️ Amendment extraction test: NO ATTEMPTS detected');
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

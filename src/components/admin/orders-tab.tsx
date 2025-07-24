@@ -13,7 +13,7 @@ import { Order } from '@/types/order';
 import { SortConfig } from '@/types/common';
 import { AdminOrderTable } from './admin-order-table';
 import { OrderDetail } from './order-detail';
-import { getSupabaseClient } from '@/lib/supabase';;
+import { getSupabaseClient } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 interface OrdersTabProps {
@@ -29,8 +29,7 @@ interface OrdersTabProps {
 }
 
 export function OrdersTab({
-  
-  const supabase = getSupabaseClient(); // Initialize Supabase clientorders,
+  orders,
   loading,
   sortConfig,
   handleSort,
@@ -40,6 +39,7 @@ export function OrdersTab({
   formatCurrency,
   onSelectOrder
 }: OrdersTabProps) {
+  const supabase = getSupabaseClient(); // Initialize Supabase client
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [orderSearch, setOrderSearch] = useState('');
   const { toast } = useToast();

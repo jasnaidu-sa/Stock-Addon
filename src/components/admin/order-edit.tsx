@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { getSupabaseClient } from '@/lib/supabase';;
+import { getSupabaseClient } from '@/lib/supabase';
 import type { Order, OrderItem } from '@/types/order';
 import { formatCurrency } from '@/lib/utils';
 
@@ -14,8 +14,8 @@ interface OrderEditProps {
   onOrderUpdated: () => void;
 }
 
-export function OrderEdit({ 
-  const supabase = getSupabaseClient(); // Initialize Supabase clientorder, onClose, onOrderUpdated }: OrderEditProps) {
+export function OrderEdit({ order, onClose, onOrderUpdated }: OrderEditProps) {
+  const supabase = getSupabaseClient(); // Initialize Supabase client
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<OrderItem[]>(order.items || []);
   const [adminNotes, setAdminNotes] = useState('');

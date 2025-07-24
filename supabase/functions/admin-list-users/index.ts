@@ -170,8 +170,9 @@ serve(async (req) => {
       });
     }
 
-    // Make a request to Clerk API to get all users
-    const clerkResponse = await fetch('https://api.clerk.com/v1/users', {
+    // Make a request to Clerk API to get all users with pagination
+    // Clerk API defaults to limit=10, so we need to increase this to get all users
+    const clerkResponse = await fetch('https://api.clerk.com/v1/users?limit=500', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${clerk_secret}`,

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Improved Amendment Detection Test</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+        }
+        .header h1 {
+            margin: 0;
+            color: #667eea;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .test-card { 
+            background: #f8f9fc; 
+            padding: 25px; 
+            margin: 20px 0; 
+            border-radius: 10px; 
+            border-left: 5px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .improvement-card {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border-left: 5px solid #fff;
+        }
+        .step { 
+            margin: 15px 0; 
+            padding: 15px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            border-left: 4px solid #fff;
+        }
+        .debug-log { 
+            background: #1a202c; 
+            color: #e2e8f0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 12px;
+            border: 1px solid #2d3748;
+        }
+        .highlight {
+            background: #ffd700;
+            color: #333;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .link-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .expected { 
+            color: #38a169; 
+            font-weight: bold; 
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .before, .after {
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .before {
+            background: #fff5f5;
+            border: 2px solid #fc8181;
+        }
+        .after {
+            background: #f0fff4;
+            border: 2px solid #68d391;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Improved Amendment Detection</h1>
+            <p>Multi-Method Amendment Discovery System</p>
+        </div>
+        
+        <div class="test-card improvement-card">
+            <h2>🎯 Detection Improvement Summary</h2>
+            <p><strong>Issue:</strong> Only finding 2 amendments instead of 11 from submission-tracking.tsx</p>
+            <p><strong>Solution:</strong> Multi-method detection system that tries 4 different approaches and selects the best one</p>
+            
+            <div class="comparison">
+                <div class="before">
+                    <h4>❌ Before (Single Method)</h4>
+                    <ul>
+                        <li>Only checked <code>has_amendment === true</code></li>
+                        <li>Found only 2 amendments</li>
+                        <li>Missed 9 amendments</li>
+                        <li>Rigid detection logic</li>
+                    </ul>
+                </div>
+                <div class="after">
+                    <h4>✅ After (Multi-Method)</h4>
+                    <ul>
+                        <li>4 different detection strategies</li>
+                        <li>Automatically selects best method</li>
+                        <li>Should find all 11 amendments</li>
+                        <li>Flexible and comprehensive</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🧪 Testing Instructions</h2>
+            <div class="step">
+                <strong>Step 1:</strong> Open Developer Tools (F12) → Console tab
+            </div>
+            <div class="step">
+                <strong>Step 2:</strong> Clear console for clean testing (Ctrl+L)
+            </div>
+            <div class="step">
+                <strong>Step 3:</strong> Navigate to Amendment Management
+                <br><a href="http://localhost:5173/admin/amendment-management" target="_blank" class="link-button">📋 Open Amendment Management</a>
+            </div>
+            <div class="step">
+                <strong>Step 4:</strong> Wait for data load and look for new detection logs
+            </div>
+            <div class="step">
+                <strong>Step 5:</strong> Click <strong>"DETAILED VIEW"</strong> and verify more amendments appear
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🔍 Expected Console Output</h2>
+            <h3>✅ New Multi-Method Detection Logs:</h3>
+            <div class="debug-log">
+<span class="highlight">📋 [processPreloadedData] Amendment detection results:</span><br>
+{<br>
+  byFlag: X,        // Original method<br>
+  byStatus: X,      // Status-based detection<br>
+  byQty: X,         // Quantity-based detection<br>
+  byJustification: X // Justification-based detection<br>
+}<br><br>
+
+<span class="highlight">📋 [processPreloadedData] Selected 'METHOD_NAME' method with X amendments</span><br><br>
+
+<strong>Expected:</strong> Should show higher amendment count (closer to 11)<br>
+<strong>Selected method:</strong> Likely 'status', 'qty', or 'justification' if more are found
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>📊 Four Detection Methods</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div style="background: #e6fffa; padding: 15px; border-radius: 8px;">
+                    <h4>Method 1: Flag-Based</h4>
+                    <p><strong>Logic:</strong> <code>has_amendment === true && amendment_data</code></p>
+                    <p>Looks for explicit amendment flags in combined data</p>
+                </div>
+                <div style="background: #e6f3ff; padding: 15px; border-radius: 8px;">
+                    <h4>Method 2: Status-Based</h4>
+                    <p><strong>Logic:</strong> <code>status in ['pending', 'submitted', 'approved', 'rejected']</code></p>
+                    <p>Detects items with amendment status fields</p>
+                </div>
+                <div style="background: #fff5e6; padding: 15px; border-radius: 8px;">
+                    <h4>Method 3: Quantity-Based</h4>
+                    <p><strong>Logic:</strong> <code>amended_qty !== null && amended_qty !== undefined</code></p>
+                    <p>Finds items with amended quantity values</p>
+                </div>
+                <div style="background: #f3e6ff; padding: 15px; border-radius: 8px;">
+                    <h4>Method 4: Justification-Based</h4>
+                    <p><strong>Logic:</strong> <code>justification && justification.trim().length > 0</code></p>
+                    <p>Identifies items with justification text</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🎯 Success Criteria</h2>
+            <ul>
+                <li><span class="expected">✓</span> See "Amendment detection results" log with 4 counts</li>
+                <li><span class="expected">✓</span> At least one method finds more than 2 amendments</li>
+                <li><span class="expected">✓</span> Selected method shows count closer to 11</li>
+                <li><span class="expected">✓</span> More amendments visible in detailed view UI</li>
+                <li><span class="expected">✓</span> Amendment count matches or approaches submission-tracking count</li>
+            </ul>
+        </div>
+
+        <div class="test-card">
+            <h2>📈 Expected Results Analysis</h2>
+            <div style="background: #f8f9fc; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h4>🔍 Most Likely Scenarios:</h4>
+                <ul>
+                    <li><strong>Method 2 (Status):</strong> Probably finds the most amendments (11)</li>
+                    <li><strong>Method 3 (Quantity):</strong> May find similar count if amended_qty is populated</li>
+                    <li><strong>Method 4 (Justification):</strong> Could find amendments with user explanations</li>
+                    <li><strong>Method 1 (Flag):</strong> Currently finds only 2, likely not the best approach</li>
+                </ul>
+            </div>
+            
+            <div style="background: #e6f3ff; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                <h4>✅ Target Outcome:</h4>
+                <p>The system should automatically select the method that finds the most amendments (ideally 11) and use that for display, ensuring no amendments are missed regardless of data structure variations.</p>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>🚨 Troubleshooting</h2>
+            <div style="background: #fff5f5; padding: 15px; border-radius: 8px; border: 2px solid #fc8181; margin: 10px 0;">
+                <h4>If all methods still find only 2 amendments:</h4>
+                <ol>
+                    <li>Check the actual data structure of the 11 amendments in submission-tracking</li>
+                    <li>Verify that the combinedPlanData contains all 11 amendments</li>
+                    <li>Look at the "First 3 amendment records" log to see data structure</li>
+                    <li>The 11 amendments might be in a different format than expected</li>
+                </ol>
+            </div>
+            
+            <div style="background: #f0fff4; padding: 15px; border-radius: 8px; border: 2px solid #68d391; margin: 10px 0;">
+                <h4>If one method finds significantly more:</h4>
+                <ol>
+                    <li>That method will be automatically selected</li>
+                    <li>Note which method works best for future reference</li>
+                    <li>Verify the amendments appear correctly in the UI</li>
+                    <li>Check that amendment data is complete and accurate</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="test-card">
+            <h2>⚡ Technical Innovation</h2>
+            <ul>
+                <li><strong>Automatic Selection:</strong> System chooses the most successful detection method</li>
+                <li><strong>Comprehensive Coverage:</strong> 4 different approaches ensure nothing is missed</li>
+                <li><strong>Data Structure Agnostic:</strong> Works regardless of how amendments are structured</li>
+                <li><strong>Performance Optimized:</strong> All methods run in parallel, minimal overhead</li>
+                <li><strong>Debug Friendly:</strong> Clear logging shows exactly which method succeeded</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        console.log('🧪 Improved amendment detection test page loaded');
+        console.log('🎯 Testing multi-method amendment detection system');
+        
+        // Track detection results
+        let detectionResults = {};
+        let selectedMethod = '';
+        let selectedCount = 0;
+        
+        const originalLog = console.log;
+        console.log = function(...args) {
+            const message = args.join(' ');
+            
+            if (message.includes('Amendment detection results:')) {
+                // Try to extract the results object from the next argument
+                if (args[1] && typeof args[1] === 'object') {
+                    detectionResults = args[1];
+                    console.info('📊 Detection Results Captured:', detectionResults);
+                }
+            }
+            
+            if (message.includes("Selected '") && message.includes("method with")) {
+                const methodMatch = message.match(/Selected '(\w+)' method with (\d+)/);
+                if (methodMatch) {
+                    selectedMethod = methodMatch[1];
+                    selectedCount = parseInt(methodMatch[2]);
+                    console.info('🎯 Method Selected:', selectedMethod, 'Count:', selectedCount);
+                }
+            }
+            
+            return originalLog.apply(console, args);
+        };
+        
+        // Report results after 15 seconds
+        setTimeout(() => {
+            console.info('📊 DETECTION RESULTS SUMMARY:');
+            console.info('Methods tested:', Object.keys(detectionResults).length > 0 ? detectionResults : 'Not captured');
+            console.info('Selected method:', selectedMethod || 'Not detected');
+            console.info('Amendment count:', selectedCount || 'Not detected');
+            
+            if (selectedCount > 2) {
+                console.info('✅ IMPROVEMENT SUCCESS: Found more than original 2 amendments');
+            } else if (selectedCount === 2) {
+                console.warn('⚠️ NO IMPROVEMENT: Still finding only 2 amendments');
+            } else {
+                console.warn('⚠️ DETECTION ISSUE: No amendments detected');
+            }
+        }, 15000);
+    </script>
+</body>
+</html>

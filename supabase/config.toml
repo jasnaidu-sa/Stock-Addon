@@ -2,3 +2,6 @@
 
 [functions."admin-update-order"]
   verify_jwt = false
+
+[functions."admin-list-users"]
+  verify_jwt = false

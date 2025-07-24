@@ -10,33 +10,35 @@ const getClient = () => {
 };
 
 /**
- * Fetches product codes from all category tables based on stock_item_id
+ * Fetches product codes and descriptions from all category tables based on stock_item_id
  * 
  * @param stockItemIds Array of stock_item_ids to fetch codes for
- * @returns Object mapping stock_item_id to its product code and category
+ * @returns Object mapping stock_item_id to its product code, description, and category
  */
-export async function fetchProductCodes(stockItemIds: string[]): Promise<Record<string, {code: string, category: string}>> {
-  // Filter out undefined or null IDs
-  const validIds = stockItemIds.filter(Boolean);
-  if (validIds.length === 0) return {};
+export async function fetchProductCodes(stockItemIds?: string[]): Promise<Record<string, {code: string, description: string, category: string}>> {
+  // Filter out undefined or null IDs if stockItemIds is provided
+  const validIds = stockItemIds ? stockItemIds.filter(Boolean) : [];
+  // If specific IDs were provided and none are valid, return empty. 
+  // If no IDs were provided (fetch all mode), validIds will be empty but we proceed.
+  if (stockItemIds && validIds.length === 0) return {};
 
-  const productCodes: Record<string, {code: string, category: string}> = {};
+  const productCodes: Record<string, {code: string, description: string, category: string}> = {};
 
-  // Define our category tables with their code field names
+  // Define our category tables with their code field names and description field
   const categoryTables = [
-    { table: 'mattress', codeField: 'mattress_code', category: 'mattress' },
-    { table: 'base', codeField: 'code', category: 'base' },
-    { table: 'furniture', codeField: 'code', category: 'furniture' },
-    { table: 'headboards', codeField: 'code', category: 'headboards' },
-    { table: 'accessories', codeField: 'code', category: 'accessories' },
-    { table: 'foam', codeField: 'code', category: 'foam' }
+    { table: 'mattress', codeField: 'mattress_code', descField: 'description', category: 'mattress' },
+    { table: 'base', codeField: 'code', descField: 'description', category: 'base' },
+    { table: 'furniture', codeField: 'code', descField: 'description', category: 'furniture' },
+    { table: 'headboards', codeField: 'code', descField: 'description', category: 'headboards' },
+    { table: 'accessories', codeField: 'code', descField: 'description', category: 'accessories' },
+    { table: 'foam', codeField: 'code', descField: 'description', category: 'foam' }
   ];
 
   // Define a type for the database records
   type DbRecord = Record<string, any> & { id?: string };
 
   // Check each table for the stock item IDs
-  for (const { table, codeField, category } of categoryTables) {
+  for (const { table, codeField, descField, category } of categoryTables) {
     try {
       const client = getClient();
       if (!client) {
@@ -44,10 +46,17 @@ export async function fetchProductCodes(stockItemIds: string[]): Promise<Record<
         continue;
       }
       
-      const { data, error } = await client
+      let queryBuilder = client
         .from(table)
-        .select(`id, ${codeField}`)
-        .in('id', validIds);
+        .select(`id, ${codeField}, ${descField}`);
+
+      // Only add the .in filter if stockItemIds were provided and there are valid IDs to filter by
+      if (stockItemIds && validIds.length > 0) {
+        queryBuilder = queryBuilder.in('id', validIds);
+      }
+      // If stockItemIds was not provided, no .in() filter is added, so it fetches all from the table.
+
+      const { data, error } = await queryBuilder;
 
       if (error) {
         console.error(`Error fetching from ${table}:`, error);
@@ -60,6 +69,7 @@ export async function fetchProductCodes(stockItemIds: string[]): Promise<Record<
           if (item && item.id && item[codeField]) {
             productCodes[item.id] = { 
               code: item[codeField], 
+              description: item[descField] || `${category} product`,
               category 
             };
           }
@@ -257,7 +267,7 @@ export async function updateOrderItemCodes(orderId: string): Promise<boolean> {
     }
     
     // 1. Get all items for this order
-    const { data: orderItems, error: itemsError } = await client
+    const { data: orderItemsData, error: itemsError } = await client
       .from('order_items')
       .select('*')
       .eq('order_id', orderId);
@@ -267,15 +277,16 @@ export async function updateOrderItemCodes(orderId: string): Promise<boolean> {
       return false;
     }
     
-    if (!orderItems || orderItems.length === 0) {
+    if (!orderItemsData || orderItemsData.length === 0) {
       return true; // No items to update
     }
+    const orderItems: OrderItem[] = orderItemsData as OrderItem[];
     
     // 2. Enrich the items with product codes
-    const enrichedItems = await enrichOrderItemsWithCodes(orderItems);
+    const enrichedItems: OrderItem[] = await enrichOrderItemsWithCodes(orderItems) as OrderItem[];
     
     // 3. Update each item in the database
-    for (const item of enrichedItems) {
+    for (const item of enrichedItems) { // item is now OrderItem
       if (item.code) {
         const updateData: Record<string, any> = { 
           code: item.code
@@ -283,7 +294,7 @@ export async function updateOrderItemCodes(orderId: string): Promise<boolean> {
         };
         
         // If stock_item_id was updated (for bases), update that too
-        if (item.stock_item_id !== orderItems.find((oi: any) => oi.id === item.id)?.stock_item_id) {
+        if (item.stock_item_id !== orderItems.find((oi: OrderItem) => oi.id === item.id)?.stock_item_id) { // oi is now OrderItem
           updateData.stock_item_id = item.stock_item_id;
         }
         
