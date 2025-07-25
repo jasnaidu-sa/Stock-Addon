@@ -379,7 +379,7 @@ export const AdminSubmissionTracking: React.FC = () => {
       }
     });
 
-    // Third pass: Calculate amendment counts by store and role
+    // Third pass: Calculate amendment counts by store and role, and determine admin status
     amendmentsByStore.forEach((amendments, storeId) => {
       const storeStatus = storeMap.get(storeId);
       if (!storeStatus) return;
@@ -387,9 +387,22 @@ export const AdminSubmissionTracking: React.FC = () => {
       const store = storeHierarchy.find(s => s.store_id === storeId);
       if (!store) return;
 
+      // Track all amendment statuses for this store to determine aggregate status
+      let hasAdminAmendments = false;
+      let latestAdminAmendmentDate = '';
+      let allAmendmentStatuses = {
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        submitted: 0,
+        admin_review: 0
+      };
+
       amendments.forEach(amendment => {
         const role = amendment.created_by_role;
         const amendmentQty = amendment.amended_qty || 0;
+        const amendmentStatus = amendment.status;
+        const amendmentDate = amendment.updated_at || amendment.created_at;
 
         if (role === 'store_manager') {
           storeStatus.store_amendment_count += amendmentQty;
@@ -399,17 +412,98 @@ export const AdminSubmissionTracking: React.FC = () => {
           storeStatus.regional_amendment_count += amendmentQty;
         } else if (role === 'admin') {
           storeStatus.admin_amendment_count += amendmentQty;
+          hasAdminAmendments = true;
+          
+          // Track latest date for admin amendments
+          if (!latestAdminAmendmentDate || amendmentDate > latestAdminAmendmentDate) {
+            latestAdminAmendmentDate = amendmentDate;
+          }
+        }
+
+        // Count all amendment statuses (regardless of role) for aggregate status
+        if (allAmendmentStatuses.hasOwnProperty(amendmentStatus)) {
+          allAmendmentStatuses[amendmentStatus]++;
         }
       });
+
+      // Determine admin submission status based on ALL amendment statuses with priority hierarchy
+      if (hasAdminAmendments || allAmendmentStatuses.approved > 0 || allAmendmentStatuses.rejected > 0 || allAmendmentStatuses.pending > 0) {
+        const totalAmendments = Object.values(allAmendmentStatuses).reduce((sum, count) => sum + count, 0);
+        
+        // Priority-based status determination:
+        if (allAmendmentStatuses.rejected > 0) {
+          // Any rejections = rejected status (highest priority)
+          storeStatus.admin_submission_status = 'rejected';
+        } else if (allAmendmentStatuses.pending > 0 || allAmendmentStatuses.submitted > 0 || allAmendmentStatuses.admin_review > 0) {
+          // Any pending work = pending status
+          storeStatus.admin_submission_status = 'pending';
+        } else if (allAmendmentStatuses.approved > 0 && totalAmendments === allAmendmentStatuses.approved) {
+          // All approved = approved status
+          storeStatus.admin_submission_status = 'approved';
+        } else {
+          // Mixed or unknown states = pending
+          storeStatus.admin_submission_status = 'pending';
+        }
+        
+        storeStatus.admin_submitted_at = latestAdminAmendmentDate || new Date().toISOString();
+      }
+    });
+
+    // Fourth pass: Auto-approve admin status for stores with submission but no lower-level amendments
+    storeMap.forEach((storeStatus, storeId) => {
+      // Check if management levels have submitted for this store (any level submission counts)
+      const hasManagementSubmission = storeStatus.regional_submission_status === 'submitted' || 
+                                     storeStatus.area_submission_status === 'submitted';
+      
+      // Check if there are any amendments from lower levels (store, area, regional) that need admin review
+      const hasLowerLevelAmendments = storeStatus.store_amendment_count > 0 || 
+                                    storeStatus.area_amendment_count > 0 || 
+                                    storeStatus.regional_amendment_count > 0;
+      
+      // Check if admin has already taken action (has admin amendments)
+      const hasAdminAction = storeStatus.admin_amendment_count > 0;
+      
+      // Auto-approve if:
+      // 1. Any management level (area or regional) has submitted
+      // 2. No amendments from lower levels exist 
+      // 3. Admin hasn't already taken action
+      // 4. Admin status is still 'not_submitted'
+      if (hasManagementSubmission && 
+          !hasLowerLevelAmendments && 
+          !hasAdminAction && 
+          storeStatus.admin_submission_status === 'not_submitted') {
+        
+        storeStatus.admin_submission_status = 'approved';
+        // Use the latest submission date from any level
+        storeStatus.admin_submitted_at = storeStatus.regional_submitted_at || 
+                                       storeStatus.area_submitted_at || 
+                                       new Date().toISOString();
+        
+        console.log(`Auto-approved admin status for store ${storeId} - no amendments to review from management submission`);
+      }
     });
 
     const result = Array.from(storeMap.values());
     console.log('Transformed submission data:', result.length, 'stores');
     console.log('Regional submissions found:', result.filter(r => r.regional_submission_status === 'submitted').length);
     console.log('Area submissions found:', result.filter(r => r.area_submission_status === 'submitted').length);
+    console.log('Admin submissions found:', result.filter(r => r.admin_submission_status === 'submitted').length);
+    console.log('Admin approvals found:', result.filter(r => r.admin_submission_status === 'approved').length);
+    console.log('Admin auto-approvals found:', result.filter(r => r.admin_submission_status === 'approved' && r.admin_amendment_count === 0).length);
+    console.log('Admin rejections found:', result.filter(r => r.admin_submission_status === 'rejected').length);
+    console.log('Admin pending found:', result.filter(r => r.admin_submission_status === 'pending').length);
+    console.log('Stores with mixed amendment statuses:', result.filter(r => 
+      (r.store_amendment_count + r.area_amendment_count + r.regional_amendment_count + r.admin_amendment_count > 1) &&
+      r.admin_submission_status === 'rejected'
+    ).length);
     console.log('Stores with amendments:', result.filter(r => 
       r.store_amendment_count + r.area_amendment_count + r.regional_amendment_count + r.admin_amendment_count > 0
     ).length);
+    console.log('Admin amendments by status:', result.filter(r => r.admin_amendment_count > 0).map(r => ({
+      store_id: r.store_id,
+      admin_status: r.admin_submission_status,
+      admin_count: r.admin_amendment_count
+    })));
     
     return result;
   };
@@ -518,18 +612,85 @@ export const AdminSubmissionTracking: React.FC = () => {
 
   // Get status badge
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Submitted</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="bg-blue-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
-      case 'amended':
-        return <Badge variant="outline" className="border-orange-500 text-orange-600"><AlertCircle className="h-3 w-3 mr-1" />Amended</Badge>;
-      default:
-        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
-    }
+    const getStatusBadgeVariant = (status: string) => {
+      switch (status) {
+        case 'pending': 
+        case 'not_submitted': 
+          return 'secondary';
+        case 'submitted': 
+        case 'approved': 
+          return 'default';
+        case 'rejected': 
+          return 'destructive';
+        case 'amended': 
+          return 'outline';
+        default: 
+          return 'secondary';
+      }
+    };
+
+    const getStatusBadgeClasses = (status: string) => {
+      switch (status) {
+        case 'pending': 
+          return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
+        case 'submitted': 
+          return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
+        case 'approved': 
+          return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200';
+        case 'amended': 
+          return 'border-orange-500 text-orange-600 hover:bg-orange-50';
+        case 'not_submitted':
+          return 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200';
+        default: 
+          return '';
+      }
+    };
+
+    const getStatusIcon = (status: string) => {
+      switch (status) {
+        case 'submitted': 
+          return <CheckCircle className="h-3 w-3 mr-1" />;
+        case 'approved': 
+          return <CheckCircle className="h-3 w-3 mr-1" />;
+        case 'rejected': 
+          return <XCircle className="h-3 w-3 mr-1" />;
+        case 'amended': 
+          return <AlertCircle className="h-3 w-3 mr-1" />;
+        case 'pending': 
+        case 'not_submitted':
+        default: 
+          return <Clock className="h-3 w-3 mr-1" />;
+      }
+    };
+
+    const getStatusText = (status: string) => {
+      switch (status) {
+        case 'submitted': 
+          return 'Submitted';
+        case 'approved': 
+          return 'Approved';
+        case 'rejected': 
+          return 'Rejected';
+        case 'amended': 
+          return 'Amended';
+        case 'pending': 
+          return 'Pending';
+        case 'not_submitted': 
+          return 'Not Submitted';
+        default: 
+          return 'Pending';
+      }
+    };
+
+    return (
+      <Badge 
+        variant={getStatusBadgeVariant(status)}
+        className={getStatusBadgeClasses(status)}
+      >
+        {getStatusIcon(status)}
+        {getStatusText(status)}
+      </Badge>
+    );
   };
 
   // Update filter function

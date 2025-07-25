@@ -1390,6 +1390,22 @@ export function WeeklyPlanInterface({
 
       // Force reload by temporarily resetting data loaded flag
       setIsInitialDataLoaded(false);
+      
+      // Clear existing amendments to force reload
+      setPendingAmendments([]);
+      
+      // If we have preloaded data, we need to refresh from parent component
+      if (preloadedData) {
+        // Signal to parent that data needs refresh
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'REFRESH_AMENDMENT_DATA' }, '*');
+        }
+        // For immediate update, we'll re-process preloaded data if available
+        if (preloadedData.storesWithSubmissions || preloadedData.amendments) {
+          await processPreloadedData();
+        }
+      }
+      
       // Reload amendments
       await loadCategoriesAndAmendments();
       setReviewingAmendment(null);
@@ -1464,6 +1480,22 @@ export function WeeklyPlanInterface({
 
       // Force reload by temporarily resetting data loaded flag
       setIsInitialDataLoaded(false);
+      
+      // Clear existing amendments to force reload
+      setPendingAmendments([]);
+      
+      // If we have preloaded data, we need to refresh from parent component
+      if (preloadedData) {
+        // Signal to parent that data needs refresh
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'REFRESH_AMENDMENT_DATA' }, '*');
+        }
+        // For immediate update, we'll re-process preloaded data if available
+        if (preloadedData.storesWithSubmissions || preloadedData.amendments) {
+          await processPreloadedData();
+        }
+      }
+      
       // Reload data
       await loadCategoriesAndAmendments();
 
@@ -1748,18 +1780,56 @@ export function WeeklyPlanInterface({
     }
   };
 
-  // Get status badge
+  // Get status badge - matching admin interface styling
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'submitted':
-        return <Badge variant="default" className="bg-blue-500"><Clock className="h-3 w-3 mr-1" />Pending Review</Badge>;
-      case 'approved':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
-      case 'rejected':
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
-      default:
-        return <Badge variant="secondary"><Edit className="h-3 w-3 mr-1" />Draft</Badge>;
-    }
+    const getStatusBadgeVariant = (status: string) => {
+      switch (status) {
+        case 'pending': return 'secondary';
+        case 'submitted': return 'default';
+        case 'approved': return 'default';
+        case 'rejected': return 'destructive';
+        default: return 'outline';
+      }
+    };
+
+    const getStatusBadgeClasses = (status: string) => {
+      switch (status) {
+        case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200';
+        case 'submitted': return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
+        case 'approved': return 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200';
+        default: return '';
+      }
+    };
+
+    const getStatusText = (status: string) => {
+      switch (status) {
+        case 'pending': return 'Pending';
+        case 'submitted': return 'Pending Review';
+        case 'approved': return 'Approved';
+        case 'rejected': return 'Rejected';
+        default: return 'Draft';
+      }
+    };
+
+    const getStatusIcon = (status: string) => {
+      switch (status) {
+        case 'pending': return <Clock className="h-3 w-3 mr-1" />;
+        case 'submitted': return <Clock className="h-3 w-3 mr-1" />;
+        case 'approved': return <CheckCircle className="h-3 w-3 mr-1" />;
+        case 'rejected': return <XCircle className="h-3 w-3 mr-1" />;
+        default: return <Edit className="h-3 w-3 mr-1" />;
+      }
+    };
+
+    return (
+      <Badge 
+        variant={getStatusBadgeVariant(status)}
+        className={getStatusBadgeClasses(status)}
+      >
+        {getStatusIcon(status)}
+        {getStatusText(status)}
+      </Badge>
+    );
   };
 
 

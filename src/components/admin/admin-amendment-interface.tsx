@@ -627,6 +627,19 @@ export function AdminAmendmentInterface() {
     applyFilters();
   }, [state.filters, state.organizationalData.amendments]);
 
+  // Listen for refresh requests from child components
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'REFRESH_AMENDMENT_DATA') {
+        console.log('Received refresh request from child component');
+        loadAdminData();
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   if (state.loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
