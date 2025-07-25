@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Loader2 } from 'lucide-react';
-import { useSupabase } from '@/hooks/use-supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface WeekOption {
@@ -31,43 +31,59 @@ interface AmendmentData {
 }
 
 export const AmendmentExport: React.FC = () => {
-  const { supabase } = useSupabase();
   const [weeks, setWeeks] = useState<WeekOption[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
   const [isExporting, setIsExporting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('📅 [AmendmentExport] useEffect triggered');
     loadWeeks();
-  }, [supabase]);
+  }, []);
 
   const loadWeeks = async () => {
-    if (!supabase) return;
-    
     try {
-      const { data: weekData, error } = await supabase
+      console.log('📅 [AmendmentExport] Loading weeks...');
+      const { data: weekData, error } = await supabaseAdmin
         .from('week_selections')
         .select(`
           id,
           week_number,
-          week_start_date as start_date,
-          week_end_date as end_date,
+          week_start_date,
+          week_end_date,
           is_current
         `)
         .eq('is_active', true)
         .order('week_start_date', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ [AmendmentExport] Error loading weeks:', error);
+        throw error;
+      }
 
-      setWeeks(weekData || []);
+      console.log('📅 [AmendmentExport] Raw week data:', weekData);
+
+      const mappedWeeks = weekData?.map((week: any) => ({
+        id: week.id,
+        week_number: week.week_number,
+        start_date: week.week_start_date,
+        end_date: week.week_end_date,
+        is_current: week.is_current
+      })) || [];
+
+      console.log('📅 [AmendmentExport] Mapped weeks:', mappedWeeks);
+      setWeeks(mappedWeeks);
       
       // Auto-select current week if available
-      const currentWeek = weekData?.find((w: WeekOption) => w.is_current);
+      const currentWeek = mappedWeeks.find((w: WeekOption) => w.is_current);
       if (currentWeek) {
+        console.log('📅 [AmendmentExport] Auto-selecting current week:', currentWeek);
         setSelectedWeek(currentWeek.id);
+      } else {
+        console.log('📅 [AmendmentExport] No current week found');
       }
     } catch (error) {
-      console.error('Error loading weeks:', error);
+      console.error('❌ [AmendmentExport] Error loading weeks:', error);
     } finally {
       setIsLoading(false);
     }
@@ -107,18 +123,25 @@ export const AmendmentExport: React.FC = () => {
   };
 
   const getWeeklyPlanTemplate = async (weekId: string): Promise<WeeklyPlanItem[]> => {
-    if (!supabase) return [];
-    
+    // First get the week reference from the selected week ID
+    const { data: weekInfo, error: weekError } = await supabaseAdmin
+      .from('week_selections')
+      .select('week_reference')
+      .eq('id', weekId)
+      .single();
+
+    if (weekError) throw weekError;
+    if (!weekInfo) throw new Error('Week not found');
+
     // Get all unique store/stock_code combinations from weekly_plan for the selected week
-    const { data: weeklyPlanData, error } = await supabase
+    const { data: weeklyPlanData, error } = await supabaseAdmin
       .from('weekly_plan')
       .select(`
-        store_id,
         store_name,
         stock_code,
-        stores!inner(warehouse_code)
+        warehouse
       `)
-      .eq('week_id', weekId);
+      .eq('reference', weekInfo.week_reference);
 
     if (error) throw error;
 
@@ -126,13 +149,13 @@ export const AmendmentExport: React.FC = () => {
     const uniqueCombinations = new Map<string, WeeklyPlanItem>();
     
     weeklyPlanData?.forEach((item: any) => {
-      const key = `${item.store_id}_${item.stock_code}`;
+      const key = `${item.store_name}_${item.stock_code}`;
       if (!uniqueCombinations.has(key)) {
         uniqueCombinations.set(key, {
-          store_id: item.store_id,
+          store_id: '', // Not needed for export
           store_name: item.store_name,
           stock_code: item.stock_code,
-          warehouse_code: item.stores?.warehouse_code || ''
+          warehouse_code: item.warehouse || ''
         });
       }
     });
@@ -141,23 +164,30 @@ export const AmendmentExport: React.FC = () => {
   };
 
   const getApprovedAmendments = async (weekId: string): Promise<AmendmentData[]> => {
-    if (!supabase) return [];
-    
-    // Get all approved amendments for the week, grouped by store/stock_code
-    const { data: amendmentData, error } = await supabase
+    // First get the week reference from the selected week ID
+    const { data: weekInfo, error: weekError } = await supabaseAdmin
+      .from('week_selections')
+      .select('week_reference')
+      .eq('id', weekId)
+      .single();
+
+    if (weekError) throw weekError;
+    if (!weekInfo) throw new Error('Week not found');
+
+    // Get all approved amendments with store information
+    const { data: amendmentData, error } = await supabaseAdmin
       .from('weekly_plan_amendments')
       .select(`
         store_id,
-        store_name,
         stock_code,
         amended_qty,
         approved_qty,
         justification,
         admin_notes,
         created_by_role,
-        stores!inner(warehouse_code)
+        stores!inner(store_name, store_code)
       `)
-      .eq('week_id', weekId)
+      .eq('week_reference', weekInfo.week_reference)
       .eq('status', 'approved')
       .order('created_at', { ascending: true });
 
@@ -188,9 +218,9 @@ export const AmendmentExport: React.FC = () => {
 
       result.push({
         store_id: firstAmendment.store_id,
-        store_name: firstAmendment.store_name,
+        store_name: firstAmendment.stores?.store_name || 'Unknown Store',
         stock_code: firstAmendment.stock_code,
-        warehouse_code: firstAmendment.stores?.warehouse_code || '',
+        warehouse_code: firstAmendment.stores?.store_code || '', // Store code goes in warehouse column
         final_qty: finalQty || 0,
         all_reasons: consolidateReasons(amendments)
       });
@@ -216,18 +246,8 @@ export const AmendmentExport: React.FC = () => {
       const selectedWeekData = weeks.find(w => w.id === selectedWeek);
       if (!selectedWeekData) throw new Error('Selected week not found');
 
-      // Get template and amendments
-      const [templateItems, approvedAmendments] = await Promise.all([
-        getWeeklyPlanTemplate(selectedWeek),
-        getApprovedAmendments(selectedWeek)
-      ]);
-
-      // Create amendments lookup
-      const amendmentsMap = new Map<string, AmendmentData>();
-      approvedAmendments.forEach(amendment => {
-        const key = `${amendment.store_id}_${amendment.stock_code}`;
-        amendmentsMap.set(key, amendment);
-      });
+      // Get only approved amendments
+      const approvedAmendments = await getApprovedAmendments(selectedWeek);
 
       // Format date for file
       const weekStartDate = formatDate(selectedWeekData.start_date);
@@ -240,18 +260,15 @@ export const AmendmentExport: React.FC = () => {
         ['Store Name', '', 'Warehouse', 'Stock Code', 'RegionalAddQty', 'Reason for addition', 'Date'] // Row 2 - Headers
       ];
 
-      // Add data rows
-      templateItems.forEach(item => {
-        const key = `${item.store_id}_${item.stock_code}`;
-        const amendment = amendmentsMap.get(key);
-        
+      // Add data rows - only approved amendments
+      approvedAmendments.forEach(amendment => {
         excelData.push([
-          item.store_name,
+          amendment.store_name,
           '', // Empty column
-          item.warehouse_code,
-          item.stock_code,
-          amendment ? amendment.final_qty.toString() : '0',
-          amendment ? amendment.all_reasons : '',
+          amendment.warehouse_code, // Store code
+          amendment.stock_code,
+          amendment.final_qty, // Keep as number, not string
+          amendment.all_reasons,
           dateColumn
         ]);
       });
@@ -340,9 +357,10 @@ export const AmendmentExport: React.FC = () => {
         </div>
 
         <div className="text-sm text-muted-foreground space-y-1">
-          <p>• File will include all store/product combinations from weekly plan</p>
-          <p>• Approved amendments will show final quantities and consolidated reasons</p>
-          <p>• Non-amended items will show quantity 0</p>
+          <p>• File will include only approved amendments</p>
+          <p>• Store Name: Store name</p>
+          <p>• Warehouse: Store code</p>
+          <p>• RegionalAddQty: Final approved quantity</p>
           <p>• File name format: AddonWeekXX - DD-MM-YYYY.xlsx</p>
         </div>
       </CardContent>
