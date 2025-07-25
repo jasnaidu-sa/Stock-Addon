@@ -47,9 +47,15 @@ export const AmendmentExport: React.FC = () => {
     try {
       const { data: weekData, error } = await supabase
         .from('week_selections')
-        .select('*')
-        .eq('status', 'active')
-        .order('start_date', { ascending: false });
+        .select(`
+          id,
+          week_number,
+          week_start_date as start_date,
+          week_end_date as end_date,
+          is_current
+        `)
+        .eq('is_active', true)
+        .order('week_start_date', { ascending: false });
 
       if (error) throw error;
 
